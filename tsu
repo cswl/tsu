@@ -28,7 +28,8 @@ case $opt in
       ;;
   h) 
       show_usage
-    ;;
+      exit
+      ;;
   p)
       PREPEND_SYSTEM_PATH=1
       ;;
@@ -40,45 +41,42 @@ test -z "$PREFIX" && PREFIX=/data/data/com.termux/files/usr
 
 # prepend path
 if test -n "$PREPEND_SYSTEM_PATH"; then
-PATH="/system/bin:/system/xbin:$PATH"
+  PATH="/system/bin:/system/xbin:$PATH"
 fi
 
 # export environment variables.
 if test -n "$SETUP_ENV"; then
-export HOME=/data/data/com.termux/files/home
-TERMUX_PATHS=data/data/com.termux/files/usr/bin:/data/data/com.termux/files/usr/bin/applets
+  export HOME=/data/data/com.termux/files/home
+  TERMUX_PATHS=data/data/com.termux/files/usr/bin:/data/data/com.termux/files/usr/bin/applets
   if test -n "$PREPEND_SYSTEM_PATH"; then
-  PATH="$PATH:$TERMUX_PATHS"
+    PATH="$PATH:$TERMUX_PATHS"
   else 
-  PATH="$TERMUX_PATHS:$PATH"
+    PATH="$TERMUX_PATHS:$PATH"
   fi;
 export PATH;
 fi;
 
-
-
 # select shell 
 if test -z "$USER_SHELL"; then
-    # check if user has set shell
-    if test -x "$HOME/.termux/shell" ; then
-      ROOT_SHELL=$HOME/.termux/shell
-    # has installed bash?
-    elif test -x "$PREFIX/bin/bash" ; then
+  # check if user has set shell
+  if test -x "$HOME/.termux/shell" ; then
+    ROOT_SHELL=$HOME/.termux/shell
+  # has installed bash?
+  elif test -x "$PREFIX/bin/bash" ; then
       ROOT_SHELL="$PREFIX/bin/bash"
-    # no..fallback to default ash.
-    else
-      ROOT_SHELL="$PREFIX/bin/ash"
-    fi
+# no..fallback to default ash
+  else
+    ROOT_SHELL="$PREFIX/bin/ash"
+  fi
 else 
-# expand //usr/ to /usr/
-USER_SHELL_EXPANDED=$(echo "$USER_SHELL" | sed "s|^//usr/|$PREFIX/|")
-ROOT_SHELL="$USER_SHELL_EXPANDED"
+  # expand //usr/ to /usr/
+  USER_SHELL_EXPANDED=$(echo "$USER_SHELL" | sed "s|^//usr/|$PREFIX/|")
+  ROOT_SHELL="$USER_SHELL_EXPANDED"
 fi
 
 # using the -c option of su allows to pass enviroment variables
-
 for s in '/system/xbin/su' '/su/bin/su'; do
-if [ -e "$s" ]; then
-exec "$s" --preserve-environment -c "LD_LIBRARY_PATH=$PREFIX/lib $ROOT_SHELL"
-fi;
+  if [ -e "$s" ]; then
+    exec "$s" --preserve-environment -c "LD_LIBRARY_PATH=$PREFIX/lib $ROOT_SHELL"
+  fi;
 done;
