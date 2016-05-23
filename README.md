@@ -1,36 +1,36 @@
-tsu
----
+## tsu
 
 A su wrapper for Termux.
 
 tsu (like tsu as in tsunami, you know ) is an su wrapper for the 
 terminal emulator and packages for Android, Termux.
 
-Unlike my quick,throwout script I wrote a while back, https://gist.github.com/cswl/cd13971e644dc5ced7b2
-tsu will focus only on dropping into root shell from termux. 
+Unlike my quick,throwout script I wrote [a while back](https://gist.github.com/cswl/cd13971e644dc5ced7b2), 
+tsu will focus only on dropping into root shell from termux.  
 It seems running commands as root, would require something on a level of sudo.
-Which turns out be too much for a bash script, 
+Which turns out be too much for a bash script.
 
-Background
-==========
-
+### Background
 Termux relies on LD_LIBRARY_PATH enviroment variables to find it's libraries. 
 For security reasons some environent variables seem to be reset by su, unless
-an --preserve-environent flag is passed.
-tsu handles this for you and also launches your preferred shell, 
+an --preserve-environent flag is passed.  
+tsu handles this for you and also launches your preferred shell.  
 su by default will use sh or mksh, depending upon how it is on your device.
 
 
-Installation
-============
-
-For now, you can git clone or download raw from github, and make the script executable.
+### Installation
+For now, you can git clone or download raw from github, and make the script executable.  
 A copy paste in the terminal would be.
-`curl -Ls -o $PREFIX/bin/tsu https://raw.githubusercontent.com/cswl/tsu/master/tsu `
-`chmod 0755 $PREFIX/bin/tsu`
+
+````
+curl -Ls -o $PREFIX/bin/tsu https://raw.githubusercontent.com/cswl/tsu/master/tsu
+chmod 0755 $PREFIX/bin/tsu
+```
+
 Hopefully, it will be added/integrated in Termux in future.
 
 
+### Usage
 ```
 tsu - A su wrapper for Termux.
 
@@ -69,14 +69,10 @@ Options Explanation.
 ```
    
 
-Contributing
-==========
-
-Know something you wanna add/improve, you're more than welcome to open a issue or create a pull request.
+### Contributing
+Know something you wanna add/improve, you're more than welcome to open a issue or create a pull request.  
 The README was written in a hurry, so some help here too. 
 
-License
-==========
-
-Licensed under the ISC license. See LICENSE.
+### License
+Licensed under the ISC license. See [LICENSE](https://github.com/cswl/tsu/blob/master/LICENSE.md).
 
