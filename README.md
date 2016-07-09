@@ -19,15 +19,11 @@ su by default will use sh or mksh, depending upon how it is on your device.
 
 
 ### Installation
-For now, you can git clone or download raw from github, and make the script executable.  
-A copy paste in the terminal would be.
+`tsu` is now available as a termux package. Run the usual `apt update` to update the list of packages, then
 
-````
-curl -Ls -o $PREFIX/bin/tsu https://raw.githubusercontent.com/cswl/tsu/master/tsu
-chmod 0755 $PREFIX/bin/tsu
 ```
-
-Hopefully, it will be added/integrated in Termux in future.
+apt install tsu
+```
 
 
 ### Usage
