@@ -13,16 +13,17 @@ show_usage() {
   echo '    Prepend /system/bin and /system/xbin to PATH.'
   echo '-e'
   echo '    Setup up some enviroment variables as when in Termux.'
+  echo '-c'
+  echo '    Pass a command to run as root.'
 }
-	
+
 # parse the options
 # TODO: validate command line arguments
-while getopts ':ehps:' opt ; do
+while getopts ':ehpsc:' opt ; do
 case $opt in
   e)
       SETUP_ENV=1
       ;;
-	  
   s)
       USER_SHELL=$OPTARG
       ;;
@@ -32,6 +33,9 @@ case $opt in
       ;;
   p)
       PREPEND_SYSTEM_PATH=1
+      ;;
+  c)
+      USER_COMMAND=$OPTARG
       ;;
 esac
 done;
@@ -77,6 +81,10 @@ fi
 # using the -c option of su allows to pass enviroment variables
 for s in '/system/xbin/su' '/su/bin/su'; do
   if [ -e "$s" ]; then
-    exec "$s" --preserve-environment -c "LD_LIBRARY_PATH=$PREFIX/lib $ROOT_SHELL"
+    if [ -z "$USER_COMMAND" ]; then
+      exec "$s" --preserve-environment -c "LD_LIBRARY_PATH=$PREFIX/lib $ROOT_SHELL"
+    else
+      exec "$s" --preserve-environment -c "LD_LIBRARY_PATH=$PREFIX/lib $ROOT_SHELL -c $USER_COMMAND"
+    fi
   fi;
 done;
