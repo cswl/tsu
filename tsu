@@ -13,8 +13,10 @@ show_usage() {
   echo '    Prepend /system/bin and /system/xbin to PATH.'
   echo '-e'
   echo '    Setup up some enviroment variables as when in Termux.'
+  echo '-c'
+  echo '    Pass a command to run as root.'
 }
-	
+
 # parse the options
 # TODO: validate command line arguments
 while getopts ':ehpsc:' opt ; do
