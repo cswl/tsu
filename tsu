@@ -42,6 +42,9 @@ test -z "$PREFIX" && PREFIX=/data/data/com.termux/files/usr
 # prepend path
 if test -n "$PREPEND_SYSTEM_PATH"; then
   PATH="/system/bin:/system/xbin:$PATH"
+  LD_LIBRARY_PATH="/system/lib:$PREFIX/lib"
+else
+  LD_LIBRARY_PATH="$PREFIX/lib"
 fi
 
 # export environment variables.
@@ -77,6 +80,6 @@ fi
 # using the -c option of su allows to pass enviroment variables
 for s in '/system/xbin/su' '/su/bin/su'; do
   if [ -e "$s" ]; then
-    exec "$s" --preserve-environment -c "LD_LIBRARY_PATH=$PREFIX/lib $ROOT_SHELL"
+    exec "$s" --preserve-environment -c "LD_LIBRARY_PATH=$LD_LIBRARY_PATH $ROOT_SHELL"
   fi;
 done;
