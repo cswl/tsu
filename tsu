@@ -75,7 +75,7 @@ else
 fi
 
 # using the -c option of su allows to pass enviroment variables
-for s in '/system/xbin/su' '/su/bin/su'; do
+for s in '/system/xbin/su' '/su/bin/su' '/magisk/.core/bin/su'; do
   if [ -e "$s" ]; then
     exec "$s" --preserve-environment -c "LD_LIBRARY_PATH=$PREFIX/lib $ROOT_SHELL"
   fi;
