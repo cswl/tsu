@@ -47,7 +47,7 @@ fi
 # export environment variables.
 if test -n "$SETUP_ENV"; then
   export HOME=/data/data/com.termux/files/home
-  TERMUX_PATHS=data/data/com.termux/files/usr/bin:/data/data/com.termux/files/usr/bin/applets
+  TERMUX_PATHS=/data/data/com.termux/files/usr/bin:/data/data/com.termux/files/usr/bin/applets
   if test -n "$PREPEND_SYSTEM_PATH"; then
     PATH="$PATH:$TERMUX_PATHS"
   else 
