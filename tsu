@@ -60,7 +60,7 @@ fi;
 if test -z "$USER_SHELL"; then
   # check if user has set shell
   if test -x "$HOME/.termux/shell" ; then
-    ROOT_SHELL=$HOME/.termux/shell
+    ROOT_SHELL="$(readlink -f -- "$HOME/.termux/shell")"
   # has installed bash?
   elif test -x "$PREFIX/bin/bash" ; then
       ROOT_SHELL="$PREFIX/bin/bash"
