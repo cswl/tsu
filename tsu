@@ -77,12 +77,24 @@ else
   ROOT_SHELL="$USER_SHELL_EXPANDED"
 fi
 
-# using the -c option of su allows to pass enviroment variables
-for s in '/su/bin/su' '/magisk/.core/bin/su' '/sbin/su' '/system/xbin/su' '/system/bin/su'  ; do
-  if [ -e "$s" ]; then
-    exec "$s" --preserve-environment -c "LD_LIBRARY_PATH=$LD_LIBRARY_PATH $ROOT_SHELL"
-  fi;
-done;
+
+# handle magisk
+if [ -e "/sbin/magisk" ]; then
+   for s in '/magisk/.core/bin/su' '/sbin/su' ; do
+    if [ -e "$s" ]; then
+    LD_LIBRARY_PATH_=$LD_LIBRARY_PATH
+    unset LD_LIBRARY_PATH
+      exec "$s" --preserve-environment -c "LD_LIBRARY_PATH=$LD_LIBRARY_PATH_ PATH=$PATH $ROOT_SHELL"
+    fi;
+	done;
+else
+  # using the -c option of su allows to pass enviroment variables
+  for s in '/su/bin/su' '/sbin/su' '/system/xbin/su' '/system/bin/su'  ; do
+    if [ -e "$s" ]; then
+      exec "$s" --preserve-environment -c "LD_LIBRARY_PATH=$LD_LIBRARY_PATH $ROOT_SHELL"
+    fi;
+  done;
+fi;
 
 # we didnt find su binary
 printf "No superuser binary detected. \n"
