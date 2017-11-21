@@ -1,6 +1,9 @@
 #!/data/data/com.termux/files/usr/bin/sh
 
-# tsu
+# Copyright (c) 2016, Cswl Coldwind <cswl1337@gmail.com
+# This software is licensed under the ISC Liscense.
+# https://github.com/cswl/tsu/blob/master/LICENSE.md
+
 
 show_usage() {
   echo 'tsu - a wrapper for su for Termux'
@@ -13,6 +16,9 @@ show_usage() {
   echo '    Prepend /system/bin and /system/xbin to PATH.'
   echo '-e'
   echo '    Setup up some enviroment variables as when in Termux.'
+  echo
+  echo 'For details of the options see:'
+  echo 'https://github.com/cswl/tsu'
 }
 
 # parse the options
