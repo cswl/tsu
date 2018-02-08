@@ -48,7 +48,14 @@ test -z "$PREFIX" && PREFIX=/data/data/com.termux/files/usr
 # prepend path
 if test -n "$PREPEND_SYSTEM_PATH"; then
   PATH="/system/bin:/system/xbin:$PATH"
-  LD_LIBRARY_PATH="/system/lib:$PREFIX/lib"
+  case "$(uname -m)" in
+  *64)
+    LD_LIBRARY_PATH="/system/lib64:/system/lib:$PREFIX/lib"
+    ;;
+  *)
+    LD_LIBRARY_PATH="/system/lib:$PREFIX/lib"
+    ;;
+  esac
 else
   LD_LIBRARY_PATH="$PREFIX/lib"
 fi
