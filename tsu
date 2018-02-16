@@ -8,7 +8,7 @@
 show_usage() {
   echo 'tsu - a wrapper for su for Termux'
   echo
-  echo 'Usage: tsu [-e|-p|-s <shell>]'
+  echo 'Usage: tsu [-e|-p|-s <shell> -c <command>]'
   echo
   echo '-s [</path/to/shell>]'
   echo '    Use an alternate specified shell. `//usr` is expanded to $PREFIX.'
@@ -16,19 +16,19 @@ show_usage() {
   echo '    Prepend /system/bin and /system/xbin to PATH.'
   echo '-e'
   echo '    Setup up some enviroment variables as when in Termux.'
+  echo '-c [command]'
+  echo '    Run command instead of shell'
   echo
   echo 'For details of the options see:'
   echo 'https://github.com/cswl/tsu'
 }
 
 # parse the options
-# TODO: validate command line arguments
-while getopts ':ehps:' opt ; do
+while getopts ':ehps:c:' opt ; do
 case $opt in
   e)
       SETUP_ENV=1
       ;;
-
   s)
       USER_SHELL=$OPTARG
       ;;
@@ -38,6 +38,17 @@ case $opt in
       ;;
   p)
       PREPEND_SYSTEM_PATH=1
+      ;;
+  c)
+      CMD="-c \"$OPTARG\""
+      ;;
+  \?)
+      echo "Unknown option -$OPTARG" 2>&1
+      exit 1
+      ;;
+  :)
+      echo "Option -$OPTARG requires argument." >&2
+      exit 1
       ;;
 esac
 done;
@@ -104,7 +115,7 @@ else
   # using the -c option of su allows to pass enviroment variables
   for s in '/su/bin/su' '/sbin/su' '/system/xbin/su' '/system/bin/su'  ; do
     if [ -e "$s" ]; then
-      exec "$s" --preserve-environment -c "LD_LIBRARY_PATH=$LD_LIBRARY_PATH $ROOT_SHELL"
+      exec "$s" --preserve-environment -c "LD_LIBRARY_PATH=$LD_LIBRARY_PATH PATH=$PATH $ROOT_SHELL $CMD"
     fi;
   done;
 fi;
