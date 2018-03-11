@@ -61,12 +61,8 @@ if test -n "$APPEND_SYSTEM_PATH"; then
     LD_LIBRARY_PATH="$PREFIX/lib:/system/lib"
     ;;
   esac
-else
-  LD_LIBRARY_PATH="$PREFIX/lib"
-fi
-
 # prepend path
-if test -n "$PREPEND_SYSTEM_PATH"; then
+elif test -n "$PREPEND_SYSTEM_PATH"; then
   PATH="/system/bin:/system/xbin:$PATH"
   case "$(uname -m)" in
   *64)
