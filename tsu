@@ -4,7 +4,6 @@
 # This software is licensed under the ISC Liscense.
 # https://github.com/cswl/tsu/blob/master/LICENSE.md
 
-
 show_usage() {
   echo 'tsu - a wrapper for su for Termux'
   echo
@@ -25,27 +24,27 @@ show_usage() {
 
 # parse the options
 # TODO: validate command line arguments
-while getopts ':aehps:' opt ; do
-case $opt in
-  a)
+while getopts ':aehps:' opt; do
+  case $opt in
+    a)
       APPEND_SYSTEM_PATH=1
       ;;
-  e)
+    e)
       SETUP_ENV=1
       ;;
 
-  s)
+    s)
       USER_SHELL=$OPTARG
       ;;
-  h)
+    h)
       show_usage
       exit
       ;;
-  p)
+    p)
       PREPEND_SYSTEM_PATH=1
       ;;
-esac
-done;
+  esac
+done
 
 # prefix check
 test -z "$PREFIX" && PREFIX=/data/data/com.termux/files/usr
@@ -54,23 +53,23 @@ test -z "$PREFIX" && PREFIX=/data/data/com.termux/files/usr
 if test -n "$APPEND_SYSTEM_PATH"; then
   PATH="$PATH:/system/bin:/system/xbin"
   case "$(uname -m)" in
-  *64)
-    LD_LIBRARY_PATH="$PREFIX/lib:/system/lib64:/system/lib"
-    ;;
-  *)
-    LD_LIBRARY_PATH="$PREFIX/lib:/system/lib"
-    ;;
+    *64)
+      LD_LIBRARY_PATH="$PREFIX/lib:/system/lib64:/system/lib"
+      ;;
+    *)
+      LD_LIBRARY_PATH="$PREFIX/lib:/system/lib"
+      ;;
   esac
-# prepend path
+  # prepend path
 elif test -n "$PREPEND_SYSTEM_PATH"; then
   PATH="/system/bin:/system/xbin:$PATH"
   case "$(uname -m)" in
-  *64)
-    LD_LIBRARY_PATH="/system/lib64:/system/lib:$PREFIX/lib"
-    ;;
-  *)
-    LD_LIBRARY_PATH="/system/lib:$PREFIX/lib"
-    ;;
+    *64)
+      LD_LIBRARY_PATH="/system/lib64:/system/lib:$PREFIX/lib"
+      ;;
+    *)
+      LD_LIBRARY_PATH="/system/lib:$PREFIX/lib"
+      ;;
   esac
 else
   LD_LIBRARY_PATH="$PREFIX/lib"
@@ -84,19 +83,19 @@ if test -n "$SETUP_ENV"; then
     PATH="$PATH:$TERMUX_PATHS"
   else
     PATH="$TERMUX_PATHS:$PATH"
-  fi;
-export PATH;
-fi;
+  fi
+  export PATH
+fi
 
 # select shell
 if test -z "$USER_SHELL"; then
   # check if user has set shell
-  if test -x "$HOME/.termux/shell" ; then
+  if test -x "$HOME/.termux/shell"; then
     ROOT_SHELL="$(readlink -f -- "$HOME/.termux/shell")"
-  # has installed bash?
-  elif test -x "$PREFIX/bin/bash" ; then
-      ROOT_SHELL="$PREFIX/bin/bash"
-# no..fallback to default ash
+    # has installed bash?
+  elif test -x "$PREFIX/bin/bash"; then
+    ROOT_SHELL="$PREFIX/bin/bash"
+    # no..fallback to default ash
   else
     ROOT_SHELL="$PREFIX/bin/ash"
   fi
@@ -106,24 +105,23 @@ else
   ROOT_SHELL="$USER_SHELL_EXPANDED"
 fi
 
-
 # using the -c option of su allows to pass enviroment variables
 if [ -e "/sbin/magisk" ]; then
   # handle magisk
-   for s in '/magisk/.core/bin/su' '/sbin/su' ; do
+  for s in '/magisk/.core/bin/su' '/sbin/su'; do
     if [ -e "$s" ]; then
-    OLD_LIBRARY_PATH=$LD_LIBRARY_PATH
-    unset LD_LIBRARY_PATH
+      OLD_LIBRARY_PATH=$LD_LIBRARY_PATH
+      unset LD_LIBRARY_PATH
       exec "$s" --preserve-environment -c "LD_LIBRARY_PATH=$OLD_LIBRARY_PATH PATH=$PATH $ROOT_SHELL"
-    fi;
-	done;
+    fi
+  done
 else
-  for s in '/su/bin/su' '/sbin/su' '/system/xbin/su' '/system/bin/su'  ; do
+  for s in '/su/bin/su' '/sbin/su' '/system/xbin/su' '/system/bin/su'; do
     if [ -e "$s" ]; then
       exec "$s" --preserve-environment -c "LD_LIBRARY_PATH=$LD_LIBRARY_PATH PATH=$PATH $ROOT_SHELL"
-    fi;
-  done;
-fi;
+    fi
+  done
+fi
 
 # we didnt find su binary
 printf "No superuser binary detected. \n"
