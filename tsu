@@ -107,20 +107,20 @@ else
 fi
 
 
-# handle magisk
+# using the -c option of su allows to pass enviroment variables
 if [ -e "/sbin/magisk" ]; then
+  # handle magisk
    for s in '/magisk/.core/bin/su' '/sbin/su' ; do
     if [ -e "$s" ]; then
-    LD_LIBRARY_PATH_=$LD_LIBRARY_PATH
+    OLD_LIBRARY_PATH=$LD_LIBRARY_PATH
     unset LD_LIBRARY_PATH
-      exec "$s" --preserve-environment -c "LD_LIBRARY_PATH=$LD_LIBRARY_PATH_ PATH=$PATH $ROOT_SHELL"
+      exec "$s" --preserve-environment -c "LD_LIBRARY_PATH=$OLD_LIBRARY_PATH PATH=$PATH $ROOT_SHELL"
     fi;
 	done;
 else
-  # using the -c option of su allows to pass enviroment variables
   for s in '/su/bin/su' '/sbin/su' '/system/xbin/su' '/system/bin/su'  ; do
     if [ -e "$s" ]; then
-      exec "$s" --preserve-environment -c "LD_LIBRARY_PATH=$LD_LIBRARY_PATH $ROOT_SHELL"
+      exec "$s" --preserve-environment -c "LD_LIBRARY_PATH=$LD_LIBRARY_PATH PATH=$PATH $ROOT_SHELL"
     fi;
   done;
 fi;
