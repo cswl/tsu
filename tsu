@@ -24,24 +24,32 @@ show_usage() {
 
 # parse the options
 # TODO: validate command line arguments
-while getopts ':aehps:' opt; do
+while getopts ':aehps:c' opt; do
   case $opt in
     a)
+      shift $((OPTIND - 1))
       APPEND_SYSTEM_PATH=1
       ;;
     e)
+      shift $((OPTIND - 1))
       SETUP_ENV=1
       ;;
 
     s)
-      USER_SHELL=$OPTARG
+      shift $((OPTIND - 1))
+      USER_SHELL="$OPTARG"
       ;;
     h)
       show_usage
       exit
       ;;
     p)
+      shift $((OPTIND - 1))
       PREPEND_SYSTEM_PATH=1
+      ;;
+    c)
+      shift $((OPTIND - 1))
+      USER_COMMAND="$@"
       ;;
     *)
       echo "Unknown option -$OPTARG" 2>&1
@@ -110,21 +118,28 @@ else
 fi
 
 # using the -c option of su allows to pass enviroment variables
+OLD_LIBRARY_PATH=$LD_LIBRARY_PATH
 if [ -e "/sbin/magisk" ]; then
   # handle magisk
   for s in '/magisk/.core/bin/su' '/sbin/su'; do
     if [ -e "$s" ]; then
-      OLD_LIBRARY_PATH=$LD_LIBRARY_PATH
       unset LD_LIBRARY_PATH
-      exec "$s" --preserve-environment -c "LD_LIBRARY_PATH=$OLD_LIBRARY_PATH PATH=$PATH $ROOT_SHELL"
+      SU_BINARY="$s"
     fi
   done
 else
   for s in '/su/bin/su' '/sbin/su' '/system/xbin/su' '/system/bin/su'; do
     if [ -e "$s" ]; then
-      exec "$s" --preserve-environment -c "LD_LIBRARY_PATH=$LD_LIBRARY_PATH PATH=$PATH $ROOT_SHELL"
+      SU_BINARY="$s"
     fi
   done
+fi
+
+if [ -z "$USER_COMMAND" ]; then
+  exec "$SU_BINARY" --preserve-environment -c "LD_LIBRARY_PATH=$OLD_LIBRARY_PATH PATH=$PATH $ROOT_SHELL"
+else
+  exec "$SU_BINARY" --preserve-environment -c "LD_LIBRARY_PATH=$OLD_LIBRARY_PATH PATH=$PATH $USER_COMMAND"
+
 fi
 
 # we didnt find su binary
