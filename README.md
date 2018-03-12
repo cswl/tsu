@@ -1,5 +1,7 @@
 ## tsu
 
+[![Build Status](https://travis-ci.org/cswl/tsu.png?branch=master)](https://travis-ci.org/cswl/tsu)
+
 A su wrapper for Termux.
 
 tsu (like tsu as in tsunami, you know ) is an su wrapper for the

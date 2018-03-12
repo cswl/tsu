@@ -1,0 +1,6 @@
+language: bash
+script: make lint
+
+before_install:
+  - sudo apt-get update -q
+  - sudo apt-get install shellcheck
