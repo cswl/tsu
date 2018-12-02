@@ -138,7 +138,7 @@ else
 fi
 
 if [ -z "$USER_COMMAND" ]; then
-  exec "$SU_BINARY" --preserve-environment -c "LD_LIBRARY_PATH=$OLD_LIBRARY_PATH PATH=$PATH $ROOT_SHELL"
+  exec "$SU_BINARY" --preserve-environment -c "HISTFILE=$HOME/.$(basename $ROOT_SHELL)_history_root LD_LIBRARY_PATH=$OLD_LIBRARY_PATH PATH=$PATH $ROOT_SHELL"
 else
   exec "$SU_BINARY" --preserve-environment -c "LD_LIBRARY_PATH=$OLD_LIBRARY_PATH PATH=$PATH $USER_COMMAND"
 
