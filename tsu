@@ -123,6 +123,11 @@ if [ -e "/sbin/magisk" ]; then
   # handle magisk
   for s in '/magisk/.core/bin/su' '/sbin/su'; do
     if [ -e "$s" ]; then
+      MAG32=$(/sbin/magisk -V)
+      if (( "16400" <= "$MAG32"  && "$MAG32" < "18200" )); then
+        # Magisk 16.4-18.2 removed 64 bit binaries which causes problems on some devices:
+        unset LD_PRELOAD
+      fi
       unset LD_LIBRARY_PATH
       SU_BINARY="$s"
     fi
