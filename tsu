@@ -125,7 +125,7 @@ if [ -e "/sbin/magisk" ]; then
     if [ -e "$s" ]; then
       unset LD_LIBRARY_PATH
       MAG32=$(command su -c "/sbin/magisk -V")
-      if [ "16400" -le "$MAG32" ]  && [ "$MAG32" -lt "18200" ]; then
+      if [ "16400" -le "$MAG32" ] && [ "$MAG32" -lt "18200" ]; then
         # Magisk 16.4-18.2 removed 64 bit binaries which causes problems on some devices:
         unset LD_PRELOAD
       fi
