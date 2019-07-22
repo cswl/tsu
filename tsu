@@ -142,14 +142,14 @@ else
   done
 fi
 
-if [ -z "$USER_COMMAND" ]; then
-  exec "$SU_BINARY" --preserve-environment -c "HISTFILE=$HOME/.$(basename $ROOT_SHELL)_history_root LD_LIBRARY_PATH=$OLD_LIBRARY_PATH PATH=$PATH $ROOT_SHELL"
+if [ -z "$SU_BINARY" ]; then
+  # we didnt find su binary
+  printf "No superuser binary detected. \\n"
+  printf "Are you rooted? \\n"
+  exit 1
 else
-  exec "$SU_BINARY" --preserve-environment -c "LD_LIBRARY_PATH=$OLD_LIBRARY_PATH PATH=$PATH $USER_COMMAND"
-
+  if [ -z "$USER_COMMAND" ]; then
+    HISTFILE=$HOME/.$(basename $ROOT_SHELL)_history_root LD_LIBRARY_PATH=$OLD_LIBRARY_PATH exec "$SU_BINARY" --preserve-environment -c "$ROOT_SHELL"
+  else
+    LD_LIBRARY_PATH=$OLD_LIBRARY_PATH exec "$SU_BINARY" --preserve-environment -c "$USER_COMMAND"
 fi
-
-# we didnt find su binary
-printf "No superuser binary detected. \\n"
-printf "Are you rooted? \\n"
-exit 1
