@@ -17,6 +17,8 @@ show_usage() {
   echo '    Append /system/bin:/system/xbin to PATH and /system/lib{64} to LD_LIBRARY_PATH.'
   echo '-e'
   echo '    Setup up some enviroment variables as when in Termux.'
+  echo '-c <command>'
+  echo '    Run given command as root.'
   echo
   echo 'For details of the options see:'
   echo 'https://github.com/cswl/tsu'
