@@ -1,0 +1,36 @@
+#!/bin/bash
+
+# tadb: helper script for easing in development
+
+if ! which adb 2>/dev/null; then
+  echo "Unable to find adb in path"
+  exit 1
+fi
+
+if ! adb root ; then
+	echo "adb needs to be root to push files"
+	exit 2
+fi;
+
+TERMUX_PREFIX=/data/data/com.termux/files/usr
+TERMUX_HOME=/data/data/com.termux/files/home
+
+case "$1" in
+push)
+  # Assume we want to push files to TERMUX_HOME
+  adb push "$2" "$TERMUX_HOME/$3"
+  ;;
+shell)
+  adb shell -t "$TERMUX_PREFIX/lib/tsu_adb_helper"
+  ;;
+# WARN: Only used for development
+setup)
+  termux_uid=$(adb shell stat -c '%u' "$TERMUX_PREFIX")
+  adb push tsu_adb_helper "$TERMUX_PREFIX/lib/tsu_adb_helper"
+  adb push tsu "$TERMUX_PREFIX/bin/tsu"
+  adb shell chown "$termux_uid:$termux_uid" "$TERMUX_PREFIX/lib/tsu_adb_helper"
+  adb shell chown "$termux_uid:$termux_uid" "$TERMUX_PREFIX/bin/tsu"
+  adb shell chmod 0755 "$TERMUX_PREFIX/lib/tsu_adb_helper"
+  adb shell chmod 0755 "$TERMUX_PREFIX/bin/tsu"
+  ;;
+esac
