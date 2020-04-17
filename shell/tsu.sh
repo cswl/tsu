@@ -27,6 +27,12 @@ show_usage() {
 EOF
 }
 
+show_usage_sudo() {
+	echo "usage: sudo command"
+	echo "usage: sudo -u [user] -g [group] command  	"
+
+}
+
 # Defaults in Termux and Android
 TERMUX_FS="/data/data/com.termux/files"
 TERMUX_PREFIX="$TERMUX_FS/usr"
@@ -149,24 +155,31 @@ root_shell_helper() {
 	fi
 }
 
-env_path_helper
 root_shell_helper
 
-if [[ -e "/sbin/su" ]]; then
-	if [[ "$(/sbin/su -v)" == "20"*"MAGISKSU" ]]; then
-		# We are on fairly recent Magisk version
-		# Build a script
-
-		if [[ "$_TSU_AS_SUDO" == true ]]; then
-			ARGS=$(printf '%q ' "$@")
-
-			exec /sbin/su -c "LD_PRELOAD=$LD_PRELOAD $ARGS"
-		fi
-
-		STARTUP_SCRIPT="PATH=$BB_MAGISK env -i $ENV_BUILT $ROOT_SHELL"
-		exec "/sbin/su" -c "$STARTUP_SCRIPT"
-
+if [[ "$_TSU_AS_SUDO" == true ]]; then
+	SUDO_GID="$(id -g)"
+	SUDO_COMMAND=/bin/bash
+	SUDO_USER="$(id -un)"
+	if [[ -z "$1" ]]; then
+		show_usage_sudo
+		exit 1
 	fi
+	CMD_ARGS=$(printf '%q ' "$@")
+	STARTUP_SCRIPT="LD_PRELOAD=$LD_PRELOAD SUDO_GID=$SUDO_GID SUDO_USER=$SUDO_USER  $CMD_ARGS"
+else
+	STARTUP_SCRIPT="$ROOT_SHELL"
+fi
+
+### ----- MAGISK
+if [[ "$(/sbin/su -v)" == "20"*"MAGISKSU" ]]; then
+	# We are on fairly recent Magisk version
+	# Build a script
+
+	env_path_helper
+	exec "/sbin/su" -c "PATH=$BB_MAGISK env -i $ENV_BUILT $STARTUP_SCRIPT"
+
+##### ----- END MAGISK
 else
 
 	# Support for other shells.
@@ -175,8 +188,7 @@ else
 		if [ -e "$s" ]; then
 			# The --preserve-enivorment is used to copy variables
 			# Since we would have to detect busybox and others
-			STARTUP_SCRIPT="LD_PRELOAD=$LD_PRELOAD $ROOT_SHELL"
-			exec "$SU_BINARY" --preserve-environment -c "$STARTUP_SCRIPT"
+			exec "$SU_BINARY" -c "LD_PRELOAD=$LD_PRELOAD $STARTUP_SCRIPT"
 		fi
 	done
 fi
