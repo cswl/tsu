@@ -1,0 +1,13 @@
+#!/system/bin/sh
+
+if [ "$1" = 'debug' ]; then 
+	echo 'Debugging mode'
+	set -x
+fi;
+
+export PREFIX=/data/data/com.termux/files/usr
+export LD_LIBRARY_PATH="$PREFIX/lib"
+
+TERMUX_UID=$("$PREFIX/bin/stat" --printf '%u' "$PREFIX")
+
+exec "$PREFIX/bin/tsu" -e -u "$TERMUX_UID"
