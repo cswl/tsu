@@ -1,3 +1,9 @@
+### tsu
+
+Gain a root shell on Termux while being able to run Termux commands as root.  
+
+Or run one off commands with well known `sudo` from normal linux distros.
+
 ```shell,tsu
     tsu A su interface wrapper for Termux
 
@@ -15,6 +21,12 @@
     -h --help    Show this screen.
 
 ```
+
+### Building
+A simple python script is used to make the final shell script as to avoid duplication in documentation.
+
+Run it by using:
+`python3 extract_usage.py`
 
 ### License
 
