@@ -5,7 +5,7 @@
 # https://github.com/cswl/tsu/blob/master/LICENSE.md
 
 ### tsu
-_TSU_version="8.0.0a+"
+_TSU_version="8.1.0a+"
 _TSU_debug="false"
 _TSU_CALL="${BASH_SOURCE[0]##*/}"
 
