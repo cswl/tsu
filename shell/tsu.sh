@@ -5,7 +5,7 @@
 # https://github.com/cswl/tsu/blob/v8/LICENSE.md
 
 ### tsu
-_TSU_version="8.1.0a+"
+_TSU_version="8.2.0"
 _TSU_debug="false"
 _TSU_CALL="${BASH_SOURCE[0]##*/}"
 
@@ -73,7 +73,7 @@ if [[ -z "$_TSU_AS_SUDO" ]]; then
 			;;
 		-h | --help)
 			show_usage
-			shift
+			exit 
 			;;
 
 		*)
