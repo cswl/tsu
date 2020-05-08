@@ -172,10 +172,8 @@ fi
 
 ### ----- MAGISK
 # shellcheck disable=SC2117
-if [[ "$(/sbin/su -v)" == "20"*"MAGISKSU" ]]; then
-	# We are on fairly recent Magisk version
-	# Build a script
-
+if [[ "$(/sbin/su -v)" == *"MAGISKSU" ]]; then
+	# We are on Magisk su
 	env_path_helper
 	exec "/sbin/su" -c "PATH=$BB_MAGISK env -i $ENV_BUILT $STARTUP_SCRIPT"
 
