@@ -109,6 +109,13 @@ env_path_helper() {
 		# Some Android utilities work. but some break
 		[[ -n "$PREPEND_SYSTEM_PATH" ]] && NEW_PATH="$ASP:$NEW_PATH"
 		[[ -n "$APPEND_SYSTEM_PATH" ]] && NEW_PATH="$NEW_PATH:$ASP"
+
+		# Android versions prior to 7.0 will break if LD_LIBRARY_PATH is set
+		if [[ -n "$LD_LIBRARY_PATH" ]] ; then
+			SYS_LIBS="/system/lib64"
+			EXP_ENV[LD_LIBRARY_PATH]="$LD_LIBRARY_PATH:$SYS_LIBS"
+		fi
+
 	else
 		# Other uid in the system cannot run Termux binaries
 		NEW_HOME="/"
@@ -183,6 +190,10 @@ fi;
 if [[ -z "$SKIP_SBIN" && "$(/sbin/su -v)" == *"MAGISKSU" ]]; then
 	# We are on Magisk su
 	env_path_helper
+		# Android versions prior to 7.0 will break if LD_LIBRARY_PATH is set
+		if [[ -n "$LD_LIBRARY_PATH" ]] ; then
+			unset LD_LIBRARY_PATH
+		fi
 	exec "/sbin/su" -c "PATH=$BB_MAGISK env -i $ENV_BUILT $STARTUP_SCRIPT"
 
 ##### ----- END MAGISK
@@ -192,9 +203,8 @@ else
 	# I dont have other shells to test
 	for SU_BINARY in  "${SU_BINARY_SEARCH[@]}" ; do
 		if [ -e "$SU_BINARY" ]; then
-			# The --preserve-enivorment is used to copy variables
-			# Since we would have to detect busybox and others
-			exec "$SU_BINARY" -c "LD_PRELOAD=$LD_PRELOAD $STARTUP_SCRIPT"
+			# Let's use the system toybox/toolbox for now
+			exec "$SU_BINARY" -c "/system/bin/env -i $ENV_BUILT $STARTUP_SCRIPT"
 		fi
 	done
 fi
