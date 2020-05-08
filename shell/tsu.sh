@@ -136,22 +136,21 @@ env_path_helper() {
 }
 
 root_shell_helper() {
-	# Select shell
-	if [ -n "$ALT_SHELL" ]; then
+	# Selection of shell, checked in this order.
+	# user defined shell -> user's login shell
+	# bash ->  sh
+	if [ "$ALT_SHELL" = "system" ]; then
+		ROOT_SHELL="/system/bin/sh"
+	elif [ -n "$ALT_SHELL" ]; then
 		# Expand //usr/ to /usr/
 		ALT_SHELL_EXPANDED="${ALT_SHELL/\/usr\//$TERMUX_PREFIX\/}"
 		ROOT_SHELL="$ALT_SHELL_EXPANDED"
-	elif [ "$ALT_SHELL" = "system" ]; then
-		ROOT_SHELL="/system/bin/sh"
-		# Check if user has set a login shell
 	elif test -x "$HOME/.termux/shell"; then
 		ROOT_SHELL="$(readlink -f -- "$HOME/.termux/shell")"
-		# Or at least installed bash
 	elif test -x "$PREFIX/bin/bash"; then
 		ROOT_SHELL="$PREFIX/bin/bash"
-		# Oh well fallback to
 	else
-		ROOT_SHELL="$PREFIX/bin/ash"
+		ROOT_SHELL="$PREFIX/bin/sh"
 	fi
 }
 
@@ -170,9 +169,18 @@ else
 	STARTUP_SCRIPT="$ROOT_SHELL"
 fi
 
+SU_BINARY_SEARCH=("/system/xbin/su" "/system/bin/su")
+
+# On some systems with other root methods `/sbin` is inacessible.
+if [[ -x "/sbin" ]]; then
+	SU_BINARY_SEARCH+=("/sbin/su" "/sbin/bin/su")
+else
+	SKIP_SBIN=1
+fi;
+
 ### ----- MAGISK
 # shellcheck disable=SC2117
-if [[ "$(/sbin/su -v)" == *"MAGISKSU" ]]; then
+if [[ -z "$SKIP_SBIN" && "$(/sbin/su -v)" == *"MAGISKSU" ]]; then
 	# We are on Magisk su
 	env_path_helper
 	exec "/sbin/su" -c "PATH=$BB_MAGISK env -i $ENV_BUILT $STARTUP_SCRIPT"
@@ -182,7 +190,7 @@ else
 
 	# Support for other shells.
 	# I dont have other shells to test
-	for SU_BINARY in '/su/bin/su' '/sbin/su' '/system/xbin/su' '/system/bin/su'; do
+	for SU_BINARY in  "${SU_BINARY_SEARCH[@]}" ; do
 		if [ -e "$SU_BINARY" ]; then
 			# The --preserve-enivorment is used to copy variables
 			# Since we would have to detect busybox and others
