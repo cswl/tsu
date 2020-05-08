@@ -5,8 +5,8 @@
 # https://github.com/cswl/tsu/blob/v8/LICENSE.md
 
 ### tsu
-_TSU_version="8.2.0"
-_TSU_debug="false"
+_TSU_VERSION="8.3.0"
+_TSU_DEBUG="false"
 _TSU_CALL="${BASH_SOURCE[0]##*/}"
 
 ## Support for busybox style calling convention
@@ -38,7 +38,7 @@ TERMUX_PREFIX="$TERMUX_FS/usr"
 TERMUX_PATH="$TERMUX_PREFIX/bin:$TERMUX_PREFIX/bin/applets"
 ROOT_HOME="$TERMUX_FS/home/.suroot"
 ANDROIDSYSTEM_PATHS="/system/bin:/system/xbin"
-ANDROIDSYSTEM_ASROOT_PATHS="/bin:/xbin"
+#ANDROIDSYSTEM_ASROOT_PATHS="/bin:/xbin"
 
 # Some constants that may change in future.
 BB_MAGISK="/sbin/.magisk/busybox"
@@ -71,9 +71,13 @@ if [[ -z "$_TSU_AS_SUDO" ]]; then
 			shift
 			shift
 			;;
+		--version)
+			echo "tsu - $_TSU_VERSION"
+			exit
+			;;
 		-h | --help)
 			show_usage
-			exit 
+			exit
 			;;
 
 		*)
@@ -93,7 +97,6 @@ env_path_helper() {
 	# This is the default behavior of linux.
 	if [[ -z "$SWITCH_USER" ]]; then
 		NEW_HOME="$ROOT_HOME"
-		NEW_TMP="$ROOT_HOME/.tmp"
 
 		EXP_ENV[PREFIX]="$TERMUX_PREFIX"
 
@@ -104,8 +107,8 @@ env_path_helper() {
 		ASP="$ANDROIDSYSTEM_PATHS"
 		# Should we add /system/* paths:
 		# Some Android utilities work. but some break
-		[[ ! -z "$PREPEND_SYSTEM_PATH" ]] && NEW_PATH="$ASP:$NEW_PATH"
-		[[ ! -z "$APPEND_SYSTEM_PATH" ]] && NEW_PATH="$NEW_PATH:$ASP"
+		[[ -n "$PREPEND_SYSTEM_PATH" ]] && NEW_PATH="$ASP:$NEW_PATH"
+		[[ -n "$APPEND_SYSTEM_PATH" ]] && NEW_PATH="$NEW_PATH:$ASP"
 	else
 		# Other uid in the system cannot run Termux binaries
 		NEW_HOME="/"
@@ -134,11 +137,11 @@ env_path_helper() {
 
 root_shell_helper() {
 	# Select shell
-	if [ -n "$USER_SHELL" ]; then
+	if [ -n "$ALT_SHELL" ]; then
 		# Expand //usr/ to /usr/
-		USER_SHELL_EXPANDED=$(echo "$USER_SHELL" | sed "s|^//usr/|$TERMUX_PREFIX/|")
-		ROOT_SHELL="$USER_SHELL_EXPANDED"
-	elif [ "$USER_SHELL" = "system" ]; then
+		ALT_SHELL_EXPANDED="${ALT_SHELL/\/usr\//$TERMUX_PREFIX\/}"
+		ROOT_SHELL="$ALT_SHELL_EXPANDED"
+	elif [ "$ALT_SHELL" = "system" ]; then
 		ROOT_SHELL="/system/bin/sh"
 		# Check if user has set a login shell
 	elif test -x "$HOME/.termux/shell"; then
@@ -156,7 +159,6 @@ root_shell_helper
 
 if [[ "$_TSU_AS_SUDO" == true ]]; then
 	SUDO_GID="$(id -g)"
-	SUDO_COMMAND=/bin/bash
 	SUDO_USER="$(id -un)"
 	if [[ -z "$1" ]]; then
 		show_usage_sudo
@@ -169,6 +171,7 @@ else
 fi
 
 ### ----- MAGISK
+# shellcheck disable=SC2117
 if [[ "$(/sbin/su -v)" == "20"*"MAGISKSU" ]]; then
 	# We are on fairly recent Magisk version
 	# Build a script
@@ -182,7 +185,7 @@ else
 	# Support for other shells.
 	# I dont have other shells to test
 	for SU_BINARY in '/su/bin/su' '/sbin/su' '/system/xbin/su' '/system/bin/su'; do
-		if [ -e "$s" ]; then
+		if [ -e "$SU_BINARY" ]; then
 			# The --preserve-enivorment is used to copy variables
 			# Since we would have to detect busybox and others
 			exec "$SU_BINARY" -c "LD_PRELOAD=$LD_PRELOAD $STARTUP_SCRIPT"
