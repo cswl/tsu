@@ -1,5 +1,6 @@
 # Build generated files
 sudo
 tsu
+!/dist/*
 # Future possbile C extension
 out/**
