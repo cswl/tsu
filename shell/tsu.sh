@@ -6,23 +6,40 @@
 
 ### tsu
 _TSU_VERSION="8.3.0"
-_TSU_DEBUG="false"
 _TSU_CALL="${BASH_SOURCE[0]##*/}"
 
 ## Support for busybox style calling convention
-if [[ "$_TSU_CALL" == sudo ]]; then
+if [[ "$_TSU_CALL" == "sudo" ]]; then
 	_TSU_AS_SUDO=true
 fi
 
-# An internal debugging option, which looks like single letter long option. Yeah
-if [[ "$1" == "--D" ]]; then
-	_TSU_DEBUG=true
-	shift
-	set -x
-fi
+log_DEBUG() { __debug_wrapper() { :; }; }
 
+gather_debug_info() {
+	echo "Environment: "
+	env
+	echo "============================"
+	dpkg --print-architecture
+	echo "Android version:"
+	getprop ro.build.version.release
+	echo "Android device:"
+	getprop ro.product.manufacturer
+	getprop ro.product.model
+	uname -a
+
+} >>"$LOG_FILE"
+
+# Allow debugging with a long option thats short
+if [[ "$1" == '--dbg' ]]; then
+	_TSU_DEBUG=true
+	printf -v LOG_FILE "%(%Y%m%d)T"
+	LOG_FILE="./tsu_debug_$LOG_FILE"
+	gather_debug_info
+	set -x
+	shift
+fi
 show_usage() {
-	cat <<EOF
+	cat <<"EOF"
   #SHOW_USAGE_BLOCK
 EOF
 }
@@ -48,6 +65,7 @@ BB_MAGISK="/sbin/.magisk/busybox"
 # Options parsing
 
 # Loop through arguments and process them
+log_DEBUG TSU_AS_SUDO
 if [[ "$_TSU_AS_SUDO" == true ]]; then
 	# Handle cases where people do `sudo su` like what
 	if [[ "$1" == "su" ]]; then
@@ -55,6 +73,7 @@ if [[ "$_TSU_AS_SUDO" == true ]]; then
 	fi
 fi
 
+log_DEBUG _TSU_AS_SUDO
 if [[ -z "$_TSU_AS_SUDO" ]]; then
 	for arg in "$@"; do
 		case $arg in
@@ -95,6 +114,10 @@ declare -A EXP_ENV
 env_path_helper() {
 
 	# This is the default behavior of linux.
+
+	log_DEBUG "${FUNCNAME[0]}"
+
+	log_DEBUG SWITCH_USER
 	if [[ -z "$SWITCH_USER" ]]; then
 		NEW_HOME="$ROOT_HOME"
 
@@ -103,15 +126,28 @@ env_path_helper() {
 		EXP_ENV[TMPDIR]="$ROOT_HOME/.tmp"
 		EXP_ENV[LD_PRELOAD]="$LD_PRELOAD"
 
-		NEW_PATH="$TERMUX_PATH"
-		ASP="$ANDROIDSYSTEM_PATHS"
-		# Should we add /system/* paths:
-		# Some Android utilities work. but some break
-		[[ -n "$PREPEND_SYSTEM_PATH" ]] && NEW_PATH="$ASP:$NEW_PATH"
-		[[ -n "$APPEND_SYSTEM_PATH" ]] && NEW_PATH="$NEW_PATH:$ASP"
-
+		log_DEBUG _TSU_AS_SUDO
+		if [[ "$_TSU_AS_SUDO" == true ]]; then
+			# sudo copies PATH variable, so most user binaries can run as root
+			# tested with `sudo env` version 1.8.31p1
+			NEW_PATH="$PATH"
+			SUDO_GID="$(id -g)"
+			SUDO_USER="$(id -un)"
+			EXP_ENV[SUDO_GID]=$SUDO_GID
+			EXP_ENV[SUDO_USER]=$SUDO_USER
+		else
+			NEW_PATH="$TERMUX_PATH"
+			ASP="$ANDROIDSYSTEM_PATHS"
+			# Should we add /system/* paths:
+			# Some Android utilities work. but some break
+			log_DEBUG "PREPEND_SYSTEM_PATH"
+			[[ -n "$PREPEND_SYSTEM_PATH" ]] && NEW_PATH="$ASP:$NEW_PATH"
+			log_DEBUG "APPEND_SYSTEM_PATH"
+			[[ -n "$APPEND_SYSTEM_PATH" ]] && NEW_PATH="$NEW_PATH:$ASP"
+		fi
 		# Android versions prior to 7.0 will break if LD_LIBRARY_PATH is set
-		if [[ -n "$LD_LIBRARY_PATH" ]] ; then
+		log_DEBUG "LD_LIBRARY_PATH"
+		if [[ -n "$LD_LIBRARY_PATH" ]]; then
 			SYS_LIBS="/system/lib64"
 			EXP_ENV[LD_LIBRARY_PATH]="$LD_LIBRARY_PATH:$SYS_LIBS"
 		fi
@@ -123,7 +159,8 @@ env_path_helper() {
 
 	fi
 
-	# We create a new environment cause the one on normal Termux is polluted with startup scripts
+	# We create a new environment cause the one on the
+	# user Termux enviroment may be polluted with startup scripts
 	EXP_ENV[PATH]="$NEW_PATH"
 	EXP_ENV[HOME]="$NEW_HOME"
 	EXP_ENV[TERM]="xterm-256color"
@@ -143,36 +180,40 @@ env_path_helper() {
 }
 
 root_shell_helper() {
+	log_DEBUG "${FUNCNAME[0]}"
+
 	# Selection of shell, checked in this order.
 	# user defined shell -> user's login shell
 	# bash ->  sh
-	if [ "$ALT_SHELL" = "system" ]; then
+	log_DEBUG "ALT_SHELL"
+	if [[ "$ALT_SHELL" == "system" ]]; then
 		ROOT_SHELL="/system/bin/sh"
-	elif [ -n "$ALT_SHELL" ]; then
+	elif [[ -n "$ALT_SHELL" ]]; then
 		# Expand //usr/ to /usr/
 		ALT_SHELL_EXPANDED="${ALT_SHELL/\/usr\//$TERMUX_PREFIX\/}"
 		ROOT_SHELL="$ALT_SHELL_EXPANDED"
-	elif test -x "$HOME/.termux/shell"; then
+	elif [[ -x "$HOME/.termux/shell" ]]; then
 		ROOT_SHELL="$(readlink -f -- "$HOME/.termux/shell")"
-	elif test -x "$PREFIX/bin/bash"; then
+	elif [[ -x "$PREFIX/bin/bash" ]]; then
 		ROOT_SHELL="$PREFIX/bin/bash"
 	else
 		ROOT_SHELL="$PREFIX/bin/sh"
 	fi
 }
 
-root_shell_helper
-
+log_DEBUG _TSU_AS_SUDO
 if [[ "$_TSU_AS_SUDO" == true ]]; then
-	SUDO_GID="$(id -g)"
-	SUDO_USER="$(id -un)"
 	if [[ -z "$1" ]]; then
 		show_usage_sudo
 		exit 1
 	fi
 	CMD_ARGS=$(printf '%q ' "$@")
-	STARTUP_SCRIPT="LD_PRELOAD=$LD_PRELOAD SUDO_GID=$SUDO_GID SUDO_USER=$SUDO_USER  $CMD_ARGS"
+	env_path_helper
+	STARTUP_SCRIPT="$CMD_ARGS"
 else
+	root_shell_helper
+	env_path_helper
+
 	STARTUP_SCRIPT="$ROOT_SHELL"
 fi
 
@@ -183,33 +224,39 @@ if [[ -x "/sbin" ]]; then
 	SU_BINARY_SEARCH+=("/sbin/su" "/sbin/bin/su")
 else
 	SKIP_SBIN=1
-fi;
+fi
 
-### ----- MAGISK
+# Unset all Termux LD_* enviroment variables to prevent `su` dlopen()ing wrong libs.
+unset LD_LIBRARY_PATH
+unset LD_PRELOAD
+
+### ----- MAGISKSU
 # shellcheck disable=SC2117
 if [[ -z "$SKIP_SBIN" && "$(/sbin/su -v)" == *"MAGISKSU" ]]; then
 	# We are on Magisk su
-	env_path_helper
-		# Android versions prior to 7.0 will break if LD_LIBRARY_PATH is set
-		if [[ -n "$LD_LIBRARY_PATH" ]] ; then
-			unset LD_LIBRARY_PATH
-		fi
 	exec "/sbin/su" -c "PATH=$BB_MAGISK env -i $ENV_BUILT $STARTUP_SCRIPT"
-
-##### ----- END MAGISK
+##### ----- END MAGISKSU
 else
-
-	# Support for other shells.
-	# I dont have other shells to test
-	for SU_BINARY in  "${SU_BINARY_SEARCH[@]}" ; do
+	##### ----- OTHERS SU
+	for SU_BINARY in "${SU_BINARY_SEARCH[@]}"; do
 		if [ -e "$SU_BINARY" ]; then
 			# Let's use the system toybox/toolbox for now
-			exec "$SU_BINARY" -c "/system/bin/env -i $ENV_BUILT $STARTUP_SCRIPT"
+			exec "$SU_BINARY" -c "PATH=$ANDROIDSYSTEM_PATHS env -i $ENV_BUILT $STARTUP_SCRIPT"
 		fi
 	done
 fi
+##### ----- END OTHERS SU
 
 # We didnt find any su binary
+set +x
 printf -- "No superuser binary detected. \n"
 printf -- "Are you rooted? \n"
+
+if [[ -n "$_TSU_DEBUG" ]]; then
+	echo "-------------------------------------"
+	echo "tsu ran in debug mode."
+	echo "Full log can be found in tsu_debug.log"
+	echo "Report any issues to: https://github.com/cswl/tsu "
+fi
+
 exit 1
