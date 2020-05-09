@@ -5,7 +5,7 @@
 # https://github.com/cswl/tsu/blob/v8/LICENSE.md
 
 ### tsu
-_TSU_VERSION="8.3.0"
+_TSU_VERSION="8.3.1"
 _TSU_CALL="${BASH_SOURCE[0]##*/}"
 
 ## Support for busybox style calling convention
