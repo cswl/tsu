@@ -29,7 +29,7 @@ gather_debug_info() {
 
 } >>"$LOG_FILE"
 
-# Allow debugging with a long option thats short
+# Allow debugging with a long option
 if [[ "$1" == '--dbg' ]]; then
 	_TSU_DEBUG=true
 	printf -v LOG_FILE "%(%Y%m%d)T"
@@ -46,7 +46,7 @@ EOF
 
 show_usage_sudo() {
 	echo "usage: sudo command"
-	echo "usage: sudo -u [user] -g [group] command  	"
+	echo "usage: sudo -u [user] -g [group] command "
 }
 
 # Defaults in Termux and Android
@@ -177,6 +177,9 @@ env_path_helper() {
 	done
 
 	[[ -z "$_TSU_DEBUG" ]] || set -x
+
+	# Creat root $HOME if it doesnt exsists yet
+	[[ -d "$ROOT_HOME" ]] || mkdir "$ROOT_HOME"
 }
 
 root_shell_helper() {
