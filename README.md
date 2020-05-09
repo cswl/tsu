@@ -5,21 +5,24 @@ Gain a root shell on Termux while being able to run Termux commands as root.
 Or run one off commands with well known `sudo` from normal linux distros.
 
 ```shell,tsu
-    tsu A su interface wrapper for Termux
+tsu A su interface wrapper for Termux
 
     Usage:
         tsu
         tsu [ -s SHELL ]  [-pe] [USER]
-        tsu --debug [ -s SHELL ]  [-pel] [USER]
+        tsu --dbg [ -s SHELL ]  [-pel] [USER]
         tsu -h | --help | --version
 
+    This package also provides a minimal `sudo` which is enough to run most basic programs
 
     Options:
+    --dbg        Enable debug output
     -s <shell>   Use an alternate specified shell.
     -l           Start a login shell.
     -p           Prepend system binaries to PATH
     -h --help    Show this screen.
 
+    https://github.com/cswl/tsu 
 ```
 
 ### Building
