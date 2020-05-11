@@ -5,13 +5,7 @@
 # https://github.com/cswl/tsu/blob/v8/LICENSE.md
 
 ### tsu
-_TSU_VERSION="8.3.2"
-_TSU_CALL="${BASH_SOURCE[0]##*/}"
-
-## Support for busybox style calling convention
-if [[ "$_TSU_CALL" == "sudo" ]]; then
-	_TSU_AS_SUDO=true
-fi
+_TSU_VERSION="8.4.1"
 
 log_DEBUG() { __debug_wrapper() { :; }; }
 
@@ -38,15 +32,30 @@ if [[ "$1" == '--dbg' ]]; then
 	set -x
 	shift
 fi
+
+## Support for busybox style calling convention.
+## This works because we don't actually `readlink` the script location.
+_TSU_CALL="${BASH_SOURCE[0]##*/}"
+if [[ "$_TSU_CALL" == "sudo" ]]; then
+	_TSU_AS_SUDO=true
+fi
+
 show_usage() {
 	cat <<"EOF"
-  #SHOW_USAGE_BLOCK
+#SHOW_USAGE_BLOCK
 EOF
 }
 
 show_usage_sudo() {
-	echo "usage: sudo command"
-	echo "usage: sudo -u [user] -g [group] command "
+	cat <<"EOF"
+sudo - run commands as root or another user 
+  usage: sudo command 
+  usage: sudo [-E] [-u USER] command 
+
+    Options:
+      -E          Preserve environment variables from the current shell.
+      -u USER 	Switch to USER instead of root..
+EOF
 }
 
 # Defaults in Termux and Android
@@ -54,23 +63,35 @@ TERMUX_FS="/data/data/com.termux/files"
 TERMUX_PREFIX="$TERMUX_FS/usr"
 TERMUX_PATH="$TERMUX_PREFIX/bin:$TERMUX_PREFIX/bin/applets"
 ROOT_HOME="$TERMUX_FS/home/.suroot"
-ANDROIDSYSTEM_PATHS="/system/bin:/system/xbin"
-#ANDROIDSYSTEM_ASROOT_PATHS="/bin:/xbin"
+ANDROID_SYSPATHS="/system/bin:/system/xbin"
+EXTRA_SYSPATHS="/sbin:/sbin/bin"
+#ANDROID_ASROOT_SYSPATHS="/bin:/xbin"
 
 # Some constants that may change in future.
 BB_MAGISK="/sbin/.magisk/busybox"
-
-# The first check should to be to if you're actually rooted.
 
 # Options parsing
 
 # Loop through arguments and process them
 log_DEBUG TSU_AS_SUDO
 if [[ "$_TSU_AS_SUDO" == true ]]; then
-	# Handle cases where people do `sudo su` like what
+	# Handle cases where people do `sudo su`
 	if [[ "$1" == "su" ]]; then
 		unset _TSU_AS_SUDO
 	fi
+	for arg in "$@"; do
+		case $arg in
+		-u | --user)
+			SWITCH_USER="$2"
+			shift
+			shift
+			;;
+		-E | --preserve-enviroment)
+			ENVIRONMENT_PRESERVE=true
+			shift
+			;;
+		esac
+	done
 fi
 
 log_DEBUG _TSU_AS_SUDO
@@ -83,6 +104,11 @@ if [[ -z "$_TSU_AS_SUDO" ]]; then
 			;;
 		-a | --sysadd)
 			APPEND_SYSTEM_PATH=true
+			shift
+			;;
+		-c | --command)
+			SU_USE_COMMAND="$2"
+			shift
 			shift
 			;;
 		-s | --shell)
@@ -100,29 +126,33 @@ if [[ -z "$_TSU_AS_SUDO" ]]; then
 			;;
 
 		*)
-			OTHER_ARGUMENTS+=("$1")
+			POS_ARGS+=("$1")
 			shift
 			;;
 		esac
 	done
 
-	SWITCH_USER="$1"
+	SWITCH_USER="${POS_ARGS[0]}"
 fi
 
 declare -A EXP_ENV
 
 env_path_helper() {
 
-	# This is the default behavior of linux.
-
+	# We will try to match the default behavior of normal linux su
+	# Unless the user specifically asks to preserve the enviroment,
+	# We create a fresh new one.
 	log_DEBUG "${FUNCNAME[0]}"
 
 	log_DEBUG SWITCH_USER
 	if [[ -z "$SWITCH_USER" ]]; then
+		## By default we start a fresh root shell with HOME set to that of the root home
+
+		# Creat root $HOME if it doesnt exsists yet
+		[[ -d "$ROOT_HOME" ]] || mkdir "$ROOT_HOME"
 		NEW_HOME="$ROOT_HOME"
 
-		EXP_ENV[PREFIX]="$TERMUX_PREFIX"
-
+		EXP_ENV[PREFIX]="$PREFIX"
 		EXP_ENV[TMPDIR]="$ROOT_HOME/.tmp"
 		EXP_ENV[LD_PRELOAD]="$LD_PRELOAD"
 
@@ -131,31 +161,34 @@ env_path_helper() {
 			# sudo copies PATH variable, so most user binaries can run as root
 			# tested with `sudo env` version 1.8.31p1
 			NEW_PATH="$PATH"
-			SUDO_GID="$(id -g)"
-			SUDO_USER="$(id -un)"
-			EXP_ENV[SUDO_GID]=$SUDO_GID
-			EXP_ENV[SUDO_USER]=$SUDO_USER
+			EXP_ENV[SUDO_GID]="$(id -g)"
+			EXP_ENV[SUDO_USER]="$(id -un)"
+			EXP_ENV[SUDO_USER]="$(id -u)"
 		else
 			NEW_PATH="$TERMUX_PATH"
-			ASP="$ANDROIDSYSTEM_PATHS"
-			# Should we add /system/* paths:
-			# Some Android utilities work. but some break
-			log_DEBUG "PREPEND_SYSTEM_PATH"
-			[[ -n "$PREPEND_SYSTEM_PATH" ]] && NEW_PATH="$ASP:$NEW_PATH"
-			log_DEBUG "APPEND_SYSTEM_PATH"
-			[[ -n "$APPEND_SYSTEM_PATH" ]] && NEW_PATH="$NEW_PATH:$ASP"
 		fi
+
 		# Android versions prior to 7.0 will break if LD_LIBRARY_PATH is set
 		log_DEBUG "LD_LIBRARY_PATH"
 		if [[ -n "$LD_LIBRARY_PATH" ]]; then
 			SYS_LIBS="/system/lib64"
 			EXP_ENV[LD_LIBRARY_PATH]="$LD_LIBRARY_PATH:$SYS_LIBS"
+		else
+			ASP="${ANDROID_SYSPATHS}:${EXTRA_SYSPATHS}"
+			# Should we add /system/* paths:
+			# Some Android utilities work. but some break
+			log_DEBUG "PREPEND_SYSTEM_PATH"
+			if [[ -n "$PREPEND_SYSTEM_PATH" ]]; then
+				NEW_PATH="$ASP:$NEW_PATH"
+			else
+				NEW_PATH="$NEW_PATH:$ASP"
+			fi
 		fi
 
 	else
 		# Other uid in the system cannot run Termux binaries
 		NEW_HOME="/"
-		NEW_PATH="$ANDROIDSYSTEM_PATHS"
+		NEW_PATH="$ANDROID_SYSPATHS"
 
 	fi
 
@@ -178,13 +211,15 @@ env_path_helper() {
 
 	[[ -z "$_TSU_DEBUG" ]] || set -x
 
-	# Creat root $HOME if it doesnt exsists yet
-	[[ -d "$ROOT_HOME" ]] || mkdir "$ROOT_HOME"
 }
 
 root_shell_helper() {
 	log_DEBUG "${FUNCNAME[0]}"
 
+	if [[ -n "$SWITCH_USER" ]]; then
+		ROOT_SHELL="/system/bin/sh"
+		return
+	fi
 	# Selection of shell, checked in this order.
 	# user defined shell -> user's login shell
 	# bash ->  sh
@@ -211,7 +246,9 @@ if [[ "$_TSU_AS_SUDO" == true ]]; then
 		exit 1
 	fi
 	CMD_ARGS=$(printf '%q ' "$@")
-	env_path_helper
+	log_DEBUG ENVIRONMENT_PRESERVE
+	[[ -n "$ENVIRONMENT_PRESERVE" ]] || env_path_helper
+
 	STARTUP_SCRIPT="$CMD_ARGS"
 else
 	root_shell_helper
@@ -237,14 +274,37 @@ unset LD_PRELOAD
 # shellcheck disable=SC2117
 if [[ -z "$SKIP_SBIN" && "$(/sbin/su -v)" == *"MAGISKSU" ]]; then
 	# We are on Magisk su
-	exec "/sbin/su" -c "PATH=$BB_MAGISK env -i $ENV_BUILT $STARTUP_SCRIPT"
-##### ----- END MAGISKSU
+	su_args=("/sbin/su")
+	[[ -z "$SWITCH_USER" ]] || su_args+=("$SWITCH_USER")
+
+	su_cmdline=("PATH=$BB_MAGISK")
+	if [[ -n "$ENVIRONMENT_PRESERVE" ]]; then
+		su_args+=("--preserve-environment")
+		su_cmdline+=("$STARTUP_SCRIPT")
+	else
+		su_cmdline+=("env -i $ENV_BUILT $STARTUP_SCRIPT")
+	fi
+	su_args+=("-c")
+	exec "${su_args[@]}" "${su_cmdline[@]}"
+	##### ----- END MAGISKSU
 else
 	##### ----- OTHERS SU
 	for SU_BINARY in "${SU_BINARY_SEARCH[@]}"; do
-		if [ -e "$SU_BINARY" ]; then
+		if [[ -x "$SU_BINARY" ]]; then
+
+			su_args=("$SU_BINARY")
+			[[ -z "$SWITCH_USER" ]] || su_args+=("$SWITCH_USER")
+
 			# Let's use the system toybox/toolbox for now
-			exec "$SU_BINARY" -c "PATH=$ANDROIDSYSTEM_PATHS env -i $ENV_BUILT $STARTUP_SCRIPT"
+			su_cmdline=("PATH=$ANDROID_SYSPATHS")
+			if [[ -n "$ENVIRONMENT_PRESERVE" ]]; then
+				su_args+=("--preserve-environment")
+				su_cmdline+=("$STARTUP_SCRIPT")
+			else
+				su_cmdline+=("env -i $ENV_BUILT $STARTUP_SCRIPT")
+			fi
+			su_args+=("-c")
+			exec "${su_args[@]}" "${su_cmdline[@]}"
 		fi
 	done
 fi
