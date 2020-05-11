@@ -5,7 +5,7 @@
 # https://github.com/cswl/tsu/blob/v8/LICENSE.md
 
 ### tsu
-_TSU_VERSION="8.3.2"
+_TSU_VERSION="8.4.1"
 _TSU_CALL="${BASH_SOURCE[0]##*/}"
 
 ## Support for busybox style calling convention
@@ -46,7 +46,7 @@ EOF
 
 show_usage_sudo() {
 	echo "usage: sudo command"
-	echo "usage: sudo -u [user] -g [group] command "
+	echo "usage: sudo -u USER command "
 }
 
 # Defaults in Termux and Android
@@ -67,10 +67,20 @@ BB_MAGISK="/sbin/.magisk/busybox"
 # Loop through arguments and process them
 log_DEBUG TSU_AS_SUDO
 if [[ "$_TSU_AS_SUDO" == true ]]; then
-	# Handle cases where people do `sudo su` like what
+	# Handle cases where people do `sudo su`
 	if [[ "$1" == "su" ]]; then
 		unset _TSU_AS_SUDO
 	fi
+	for arg in "$@"; do
+		case $arg in
+		-u | --user)
+			SWITCH_USER="$2"
+			shift
+			shift
+			;;
+		esac
+	done
+
 fi
 
 log_DEBUG _TSU_AS_SUDO
@@ -100,13 +110,13 @@ if [[ -z "$_TSU_AS_SUDO" ]]; then
 			;;
 
 		*)
-			OTHER_ARGUMENTS+=("$1")
+			POS_ARGS+=("$1")
 			shift
 			;;
 		esac
 	done
 
-	SWITCH_USER="$1"
+	SWITCH_USER="${POS_ARGS[0]}"
 fi
 
 declare -A EXP_ENV
@@ -185,6 +195,10 @@ env_path_helper() {
 root_shell_helper() {
 	log_DEBUG "${FUNCNAME[0]}"
 
+	if [[ -n "$SWITCH_USER" ]]; then
+		ROOT_SHELL="/system/bin/sh"
+		return
+	fi
 	# Selection of shell, checked in this order.
 	# user defined shell -> user's login shell
 	# bash ->  sh
@@ -237,14 +251,21 @@ unset LD_PRELOAD
 # shellcheck disable=SC2117
 if [[ -z "$SKIP_SBIN" && "$(/sbin/su -v)" == *"MAGISKSU" ]]; then
 	# We are on Magisk su
-	exec "/sbin/su" -c "PATH=$BB_MAGISK env -i $ENV_BUILT $STARTUP_SCRIPT"
-##### ----- END MAGISKSU
+	su_cmdline=("/sbin/su")
+	[[ -z "$SWITCH_USER" ]] || su_cmdline+=("$SWITCH_USER")
+	su_cmdline+=("-c" "PATH=$BB_MAGISK env -i $ENV_BUILT $STARTUP_SCRIPT")
+	exec "${su_cmdline[@]}"
+	##### ----- END MAGISKSU
 else
 	##### ----- OTHERS SU
 	for SU_BINARY in "${SU_BINARY_SEARCH[@]}"; do
-		if [ -e "$SU_BINARY" ]; then
+		if [[ -x "$SU_BINARY" ]]; then
 			# Let's use the system toybox/toolbox for now
-			exec "$SU_BINARY" -c "PATH=$ANDROIDSYSTEM_PATHS env -i $ENV_BUILT $STARTUP_SCRIPT"
+			su_cmdline=("/sbin/su")
+			[[ -z "$SWITCH_USER" ]] || su_cmdline+=("$SWITCH_USER")
+			su_cmdline+=("-c" "PATH=$ANDROIDSYSTEM_PATHS env -i $ENV_BUILT $STARTUP_SCRIPT")
+			exec "${su_cmdline[@]}"
+
 		fi
 	done
 fi
