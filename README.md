@@ -9,17 +9,20 @@ tsu A su interface wrapper for Termux
 
     Usage:
         tsu
-        tsu [ -s SHELL ]  [-pe] [USER]
-        tsu --dbg [ -s SHELL ]  [-pel] [USER]
+        tsu [ -s SHELL ]  [-p|-a] [USER]
+        tsu --dbg [ -s SHELL ]  [-p|-a] [USER]
         tsu -h | --help | --version
 
-    This package also provides a minimal `sudo` which is enough to run most basic programs
+    This package also provides a minimal sudo which is enough to run most basic programs
 
     Options:
     --dbg        Enable debug output
     -s <shell>   Use an alternate specified shell.
-    -l           Start a login shell.
     -p           Prepend system binaries to PATH
+    -a           Append system binaries to PATH
+    -h --help    Show this screen.
+
+    https://github.com/cswl/tsu 
     -h --help    Show this screen.
 
     https://github.com/cswl/tsu 
