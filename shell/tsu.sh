@@ -5,7 +5,7 @@
 # https://github.com/cswl/tsu/blob/v8/LICENSE.md
 
 ### tsu
-_TSU_VERSION="8.4.1"
+_TSU_VERSION="8.5.0"
 
 log_DEBUG() { __debug_wrapper() { :; }; }
 
