@@ -1,0 +1,55 @@
+on: 
+  push: 
+    branches: [ci_*]
+
+jobs:
+  Emulated_Tests:
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        api-level: [28, 29]
+# We likely dont need Google APIs to test termux
+        target: [default] # , google_apis]
+
+    steps:
+    - name: checkout
+      uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v1
+      with:
+          python-version: 3.8
+    
+    - name: Set up node
+      uses: actions/setup-node@v1
+      with:
+        node-version: 12
+
+    - name: Install script deps
+      run: |
+          pip install -r emulated/requirements.txt
+          npm install -g thumbsup
+
+    - name: Start emulator tests
+      uses: reactivecircus/android-emulator-runner@v2
+      with:
+        api-level: ${{ matrix.api-level }}
+        target:  ${{ matrix.target }}
+        arch: x86_64
+        profile: pixel_3
+        script: ./emulated/emulated-script.py
+    
+    - name: Upload test steps
+      uses: actions/upload-artifact@v2
+      with:
+       name: ci_run
+       path: ~/ci_run/steps
+
+    - name: Generate Gallery
+      run:  thumbsup --input ~/ci_run/steps --output ./public 
+
+    - name: Add tests for viewing
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.REPO_GITHUB_TOKEN }}
+        publish_dir: ./public
