@@ -188,7 +188,7 @@ env_path_helper() {
 			log_DEBUG "PREPEND_SYSTEM_PATH"
 			if [[ -n "$PREPEND_SYSTEM_PATH" ]]; then
 				NEW_PATH="$ASP:$NEW_PATH"
-			else
+			elif [[ -n "$APPEND_SYSTEM_PATH" ]]; then
 				NEW_PATH="$NEW_PATH:$ASP"
 			fi
 		fi
