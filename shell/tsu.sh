@@ -276,8 +276,10 @@ else
 fi
 
 # Unset all Termux LD_* enviroment variables to prevent symbols missing , dlopen()ing of wrong libs.
-unset LD_LIBRARY_PATH
-unset LD_PRELOAD
+if [[ -z "$ENVIRONMENT_PRESERVE" ]]; then
+	unset LD_LIBRARY_PATH
+	unset LD_PRELOAD
+fi
 
 ### ----- MAGISKSU
 # shellcheck disable=SC2117
@@ -286,12 +288,11 @@ if [[ -z "$SKIP_SBIN" && "$(/sbin/su -v)" == *"MAGISKSU" ]]; then
 	su_args=("/sbin/su")
 	[[ -z "$SWITCH_USER" ]] || su_args+=("$SWITCH_USER")
 
-	su_cmdline="PATH=$BB_MAGISK "
 	if [[ -n "$ENVIRONMENT_PRESERVE" ]]; then
 		su_args+=("--preserve-environment")
-		su_cmdline+="$STARTUP_SCRIPT"
+		su_cmdline="PATH=$BB_MAGISK:$PATH $STARTUP_SCRIPT"
 	else
-		su_cmdline+="env -i $ENV_BUILT $STARTUP_SCRIPT"
+		su_cmdline="PATH=$BB_MAGISK env -i $ENV_BUILT $STARTUP_SCRIPT"
 	fi
 	su_args+=("-c")
 	exec "${su_args[@]}" "${su_cmdline}"
@@ -305,12 +306,11 @@ else
 			[[ -z "$SWITCH_USER" ]] || su_args+=("$SWITCH_USER")
 
 			# Let's use the system toybox/toolbox for now
-			su_cmdline="PATH=$ANDROID_SYSPATHS "
 			if [[ -n "$ENVIRONMENT_PRESERVE" ]]; then
 				su_args+=("--preserve-environment")
-				su_cmdline+="$STARTUP_SCRIPT "
+				su_cmdline="PATH=$ANDROID_SYSPATHS:$PATH $STARTUP_SCRIPT "
 			else
-				su_cmdline+="env -i $ENV_BUILT $STARTUP_SCRIPT"
+				su_cmdline="PATH=$ANDROID_SYSPATHS env -i $ENV_BUILT $STARTUP_SCRIPT"
 			fi
 			su_args+=("-c")
 			exec "${su_args[@]}" "${su_cmdline}"
