@@ -210,15 +210,7 @@ env_path_helper() {
 	## Android specific exports: Need more testing.
 	EXP_ENV[ANDROID_ROOT]="$ANDROID_ROOT"
 	EXP_ENV[ANDROID_DATA]="$ANDROID_DATA"
-
-	ENV_BUILT=""
-
-	for key in "${!EXP_ENV[@]}"; do
-		ENV_BUILT="$ENV_BUILT $key=${EXP_ENV[$key]} "
-	done
-
 	[[ -z "$_TSU_DEBUG" ]] || set -x
-
 }
 
 root_shell_helper() {
@@ -276,10 +268,25 @@ else
 fi
 
 # Unset all Termux LD_* enviroment variables to prevent symbols missing , dlopen()ing of wrong libs.
-if [[ -z "$ENVIRONMENT_PRESERVE" ]]; then
-	unset LD_LIBRARY_PATH
-	unset LD_PRELOAD
+if [[ -n "$ENVIRONMENT_PRESERVE" ]]; then
+	EXP_ENV[LD_PRELOAD]="$LD_PRELOAD"
+	if [[ -n "$LD_LIBRARY_PATH" ]]; then
+		EXP_ENV[LD_LIBRARY_PATH]="$LD_LIBRARY_PATH"
+	fi
 fi
+unset LD_LIBRARY_PATH
+unset LD_PRELOAD
+
+## Build the environment
+[[ -z "$_TSU_DEBUG" ]] || set +x
+ENV_BUILT=""
+
+for key in "${!EXP_ENV[@]}"; do
+	ENV_BUILT="$ENV_BUILT $key=${EXP_ENV[$key]} "
+done
+[[ -z "$_TSU_DEBUG" ]] || set -x
+
+### TODO: Implement this cleanly.
 
 ### ----- MAGISKSU
 # shellcheck disable=SC2117
@@ -290,7 +297,7 @@ if [[ -z "$SKIP_SBIN" && "$(/sbin/su -v)" == *"MAGISKSU" ]]; then
 
 	if [[ -n "$ENVIRONMENT_PRESERVE" ]]; then
 		su_args+=("--preserve-environment")
-		su_cmdline="PATH=$BB_MAGISK:$PATH $STARTUP_SCRIPT"
+		su_cmdline="PATH=$BB_MAGISK:$PATH $ENV_BUILT $STARTUP_SCRIPT"
 	else
 		su_cmdline="PATH=$BB_MAGISK env -i $ENV_BUILT $STARTUP_SCRIPT"
 	fi
@@ -308,7 +315,7 @@ else
 			# Let's use the system toybox/toolbox for now
 			if [[ -n "$ENVIRONMENT_PRESERVE" ]]; then
 				su_args+=("--preserve-environment")
-				su_cmdline="PATH=$ANDROID_SYSPATHS:$PATH $STARTUP_SCRIPT "
+				su_cmdline="PATH=$ANDROID_SYSPATHS:$PATH $ENV_BUILT $STARTUP_SCRIPT "
 			else
 				su_cmdline="PATH=$ANDROID_SYSPATHS env -i $ENV_BUILT $STARTUP_SCRIPT"
 			fi
