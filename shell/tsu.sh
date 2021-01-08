@@ -155,14 +155,14 @@ env_path_helper() {
 	log_DEBUG SWITCH_USER
 	if [[ -z "$SWITCH_USER" ]]; then
 		## By default we start a fresh root shell with HOME set to that of the root home
-
-		# Creat root $HOME if it doesnt exsists yet
-		[[ -d "$ROOT_HOME" ]] || mkdir "$ROOT_HOME"
 		NEW_HOME="$ROOT_HOME"
 
 		EXP_ENV[PREFIX]="$PREFIX"
 		EXP_ENV[TMPDIR]="$ROOT_HOME/.tmp"
 		EXP_ENV[LD_PRELOAD]="$LD_PRELOAD"
+
+		# Create $TMPDIR, and $HOME, if they do not exist
+		[[ -d "${EXP_ENV[TMPDIR]}" ]] || mkdir -p "${EXP_ENV[TMPDIR]}"
 
 		log_DEBUG _TSU_AS_SUDO
 		if [[ "$_TSU_AS_SUDO" == true ]]; then
