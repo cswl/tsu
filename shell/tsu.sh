@@ -162,7 +162,8 @@ env_path_helper() {
 
 		EXP_ENV[PREFIX]="$PREFIX"
 		EXP_ENV[TMPDIR]="$ROOT_HOME/.tmp"
-		EXP_ENV[LD_PRELOAD]="$LD_PRELOAD"
+    # Empty LD_PRELOAD cause problems on some systems
+    [[ ! -z "$LD_PRELOAD" ]] && EXP_ENV[LD_PRELOAD]="$LD_PRELOAD"
 
 		log_DEBUG _TSU_AS_SUDO
 		if [[ "$_TSU_AS_SUDO" == true ]]; then
@@ -308,19 +309,39 @@ else
 	##### ----- OTHERS SU
 	for SU_BINARY in "${SU_BINARY_SEARCH[@]}"; do
 		if [[ -x "$SU_BINARY" ]]; then
-
-			su_args=("$SU_BINARY")
-			[[ -z "$SWITCH_USER" ]] || su_args+=("$SWITCH_USER")
-
-			# Let's use the system toybox/toolbox for now
-			if [[ -n "$ENVIRONMENT_PRESERVE" ]]; then
-				su_args+=("--preserve-environment")
-				su_cmdline="PATH=$ANDROID_SYSPATHS:$PATH $ENV_BUILT $STARTUP_SCRIPT "
+			SU_HELP=`$SU_BINARY --help 2>&1`
+			if [[
+				! -z "$SU_AOSP" ||
+				# https://android.googlesource.com/platform/system/extras/+/95f7685/su/su.c
+				"$SU_HELP" == *"usage: su [UID[,GID[,GID2]...]] [COMMAND [ARG...]]"* ||
+				# https://android.googlesource.com/platform/system/extras/+/refs/heads/android10-mainline-media-release/su/su.cpp
+				"$SU_HELP" == *"usage: su [WHO [COMMAND...]]"*
+			]]; then
+				# This is AOSP su without -c argument
+				su_args=("$SU_BINARY")
+				# Default uid is required
+				[[ -z "$SWITCH_USER" ]] && su_args+=("0") || su_args+=("$SWITCH_USER")
+				# Let's use the system toybox/toolbox for now
+				if [[ -n "$ENVIRONMENT_PRESERVE" ]]; then
+					su_cmdline=" $STARTUP_SCRIPT"
+				else
+					su_cmdline="env -i $ENV_BUILT $STARTUP_SCRIPT"
+				fi
+				exec "${su_args[@]}" "${su_cmdline}"
 			else
-				su_cmdline="PATH=$ANDROID_SYSPATHS env -i $ENV_BUILT $STARTUP_SCRIPT"
+				su_args=("$SU_BINARY")
+				[[ -z "$SWITCH_USER" ]] || su_args+=("$SWITCH_USER")
+
+				# Let's use the system toybox/toolbox for now
+				if [[ -n "$ENVIRONMENT_PRESERVE" ]]; then
+					su_args+=("--preserve-environment")
+					su_cmdline="PATH=$ANDROID_SYSPATHS:$PATH $ENV_BUILT $STARTUP_SCRIPT "
+				else
+					su_cmdline="PATH=$ANDROID_SYSPATHS env -i $ENV_BUILT $STARTUP_SCRIPT"
+				fi
+				su_args+=("-c")
+				exec "${su_args[@]}" "${su_cmdline}"
 			fi
-			su_args+=("-c")
-			exec "${su_args[@]}" "${su_cmdline}"
 		fi
 	done
 fi
