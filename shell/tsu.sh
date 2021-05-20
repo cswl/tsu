@@ -310,7 +310,7 @@ else
 	##### ----- OTHERS SU
 	for SU_BINARY in "${SU_BINARY_SEARCH[@]}"; do
 		if [[ -x "$SU_BINARY" ]]; then
-			SU_HELP="$(SU_BINARY --help 2>&1)"
+			SU_HELP="$($SU_BINARY --help 2>&1)"
 			if [[
 				-n "$SU_AOSP" ||
 				# https://android.googlesource.com/platform/system/extras/+/95f7685/su/su.c
