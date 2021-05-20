@@ -323,11 +323,11 @@ else
 				[[ -z "$SWITCH_USER" ]] && su_args+=("0") || su_args+=("$SWITCH_USER")
 				# Let's use the system toybox/toolbox for now
 				if [[ -n "$ENVIRONMENT_PRESERVE" ]]; then
-					su_cmdline=" $STARTUP_SCRIPT"
+					su_cmdline="$STARTUP_SCRIPT"
 				else
 					su_cmdline="env -i $ENV_BUILT $STARTUP_SCRIPT"
 				fi
-				exec "${su_args[@]}" "${su_cmdline}"
+				exec "${su_args[@]}" ${su_cmdline}
 			else
 				su_args=("$SU_BINARY")
 				[[ -z "$SWITCH_USER" ]] || su_args+=("$SWITCH_USER")
