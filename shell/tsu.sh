@@ -1,4 +1,5 @@
 #!/usr/bin/bash
+# vim: noexpandtab copyindent preserveindent softtabstop=0 shiftwidth=4 tabstop=4
 
 # Copyright (c) 2020, Cswl C. https://github.com/cswl
 # This software is licensed under the ISC Liscense.
@@ -162,8 +163,8 @@ env_path_helper() {
 
 		EXP_ENV[PREFIX]="$PREFIX"
 		EXP_ENV[TMPDIR]="$ROOT_HOME/.tmp"
-    # Empty LD_PRELOAD cause problems on some systems
-    [[ ! -z "$LD_PRELOAD" ]] && EXP_ENV[LD_PRELOAD]="$LD_PRELOAD"
+		# Empty LD_PRELOAD cause problems on some systems
+		[[ -n "$LD_PRELOAD" ]] && EXP_ENV[LD_PRELOAD]="$LD_PRELOAD"
 
 		log_DEBUG _TSU_AS_SUDO
 		if [[ "$_TSU_AS_SUDO" == true ]]; then
@@ -309,9 +310,9 @@ else
 	##### ----- OTHERS SU
 	for SU_BINARY in "${SU_BINARY_SEARCH[@]}"; do
 		if [[ -x "$SU_BINARY" ]]; then
-			SU_HELP=`$SU_BINARY --help 2>&1`
+			SU_HELP="$(SU_BINARY --help 2>&1)"
 			if [[
-				! -z "$SU_AOSP" ||
+				-n "$SU_AOSP" ||
 				# https://android.googlesource.com/platform/system/extras/+/95f7685/su/su.c
 				"$SU_HELP" == *"usage: su [UID[,GID[,GID2]...]] [COMMAND [ARG...]]"* ||
 				# https://android.googlesource.com/platform/system/extras/+/refs/heads/android10-mainline-media-release/su/su.cpp
@@ -327,6 +328,9 @@ else
 				else
 					su_cmdline="env -i $ENV_BUILT $STARTUP_SCRIPT"
 				fi
+				# If we quote ${su_cmdline} - su interprets it
+				# as one argument (executable) and not working properly
+				# shellcheck disable=SC2086
 				exec "${su_args[@]}" ${su_cmdline}
 			else
 				su_args=("$SU_BINARY")
