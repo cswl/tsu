@@ -34,4 +34,4 @@ TERMUX_PREFIX=/data/data/com.termux/files/usr
   exit 0
 }
 
-adb shell -t "$TERMUX_PREFIX/lib/adb-termux-helper" $@
+adb shell -t "$TERMUX_PREFIX/lib/adb-termux-helper $(printf "%q " "$@")"

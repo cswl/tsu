@@ -1,4 +1,5 @@
 #!/system/bin/sh
+set -e
 
 # Variables based on https://github.com/termux/termux-app/issues/77
 # from https://gist.github.com/rewida17/f8564bee5a196a8f51b98cd2e53813e4
@@ -25,6 +26,13 @@ export TERMUX="/data/data/com.termux/"
 TERMUX_UID=$("$PREFIX/bin/stat" --printf '%u' "$PREFIX")
 export TERMUX_UID
 
-[[ -n $1 ]] && CMD="-c $*"
 cd "$HOME" || true
-exec "$PREFIX/bin/sudo" -E -u "$TERMUX_UID" "$SHELL" --login $CMD
+if [ -n "$1" ]; then
+  # NOTE: I'm not sure it will preserve quotes in bash,
+  # but $(printf "%q " "$@") is not POSIX compatible,
+  # so maybe we may check BASH_VERSION variable if it would not work as expected.
+  # Tested on Almquist shell
+  exec "$PREFIX/bin/sudo" -E -u "$TERMUX_UID" "$SHELL" --login -c "$*"
+else
+  exec "$PREFIX/bin/sudo" -E -u "$TERMUX_UID" "$SHELL" --login
+fi
