@@ -65,7 +65,7 @@ TERMUX_PREFIX="$TERMUX_FS/usr"
 TERMUX_PATH="$TERMUX_PREFIX/bin:$TERMUX_PREFIX/bin/applets"
 ROOT_HOME="$TERMUX_FS/home/.suroot"
 ANDROID_SYSPATHS="/system/bin:/system/xbin"
-EXTRA_SYSPATHS="/sbin:/sbin/bin"
+EXTRA_SYSPATHS="/sbin:/sbin/bin:/vendor/bin"
 #ANDROID_ASROOT_SYSPATHS="/bin:/xbin"
 
 # Some constants that may change in future.
@@ -116,10 +116,6 @@ if [[ -z "$_TSU_AS_SUDO" ]]; then
 			PREPEND_SYSTEM_PATH=true
 			shift
 			;;
-		-a | --sysadd)
-			APPEND_SYSTEM_PATH=true
-			shift
-			;;
 		-s | --shell)
 			ALT_SHELL="$2"
 			shift
@@ -157,14 +153,22 @@ env_path_helper() {
 	if [[ -z "$SWITCH_USER" ]]; then
 		## By default we start a fresh root shell with HOME set to that of the root home
 
-		# Creat root $HOME if it doesnt exsists yet
-		[[ -d "$ROOT_HOME" ]] || mkdir "$ROOT_HOME"
 		NEW_HOME="$ROOT_HOME"
+		EXP_ENV[TMPDIR]="$ROOT_HOME/.tmp"
+		# Create $TMPDIR, and $HOME, if they do not exist
+		[[ -d "${EXP_ENV[TMPDIR]}" ]] || mkdir -p "${EXP_ENV[TMPDIR]}"
 
 		EXP_ENV[PREFIX]="$PREFIX"
-		EXP_ENV[TMPDIR]="$ROOT_HOME/.tmp"
+
 		# Empty LD_PRELOAD cause problems on some systems
 		[[ -n "$LD_PRELOAD" ]] && EXP_ENV[LD_PRELOAD]="$LD_PRELOAD"
+
+		# Android versions prior to 7.0 will break if LD_LIBRARY_PATH is set
+		log_DEBUG "LD_LIBRARY_PATH"
+		if [[ -n "$LD_LIBRARY_PATH" ]]; then
+			SYS_LIBS="/system/lib64"
+			EXP_ENV[LD_LIBRARY_PATH]="$LD_LIBRARY_PATH:$SYS_LIBS"
+		fi
 
 		log_DEBUG _TSU_AS_SUDO
 		if [[ "$_TSU_AS_SUDO" == true ]]; then
@@ -176,14 +180,6 @@ env_path_helper() {
 			EXP_ENV[SUDO_USER]="$(id -u)"
 		else
 			NEW_PATH="$TERMUX_PATH"
-		fi
-
-		# Android versions prior to 7.0 will break if LD_LIBRARY_PATH is set
-		log_DEBUG "LD_LIBRARY_PATH"
-		if [[ -n "$LD_LIBRARY_PATH" ]]; then
-			SYS_LIBS="/system/lib64"
-			EXP_ENV[LD_LIBRARY_PATH]="$LD_LIBRARY_PATH:$SYS_LIBS"
-		else
 			ASP="${ANDROID_SYSPATHS}:${EXTRA_SYSPATHS}"
 			# Should we add /system/* paths:
 			# Some Android utilities work. but some break
@@ -320,7 +316,8 @@ else
 				# Default uid is required
 				[[ -z "$SWITCH_USER" ]] && su_args+=("0") || su_args+=("$SWITCH_USER")
 				if [[ -n "$ENVIRONMENT_PRESERVE" ]]; then
-					su_cmdline="env $ENV_BUILT $STARTUP_SCRIPT"
+					# We have to explicitly pass PATH as it may be reset by su
+					su_cmdline="env PATH=$PATH $ENV_BUILT $STARTUP_SCRIPT"
 				else
 					su_cmdline="env -i $ENV_BUILT $STARTUP_SCRIPT"
 				fi

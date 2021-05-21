@@ -10,14 +10,13 @@ tsu A su interface wrapper for Termux
     Usage:
         tsu
         tsu [ -s SHELL ]  [-p|-a] [USER]
-        tsu --dbg [ -s SHELL ] [-p|-a] [-E] [USER]
+        tsu --dbg [ -s SHELL ] [-p] [-E] [USER]
         tsu -h | --help | --version
 
     Options:
     --dbg        Enable debug output
     -s <shell>   Use an alternate specified shell.
-    -p           Prepend system binaries to PATH
-    -a           Append system binaries to PATH
+    -p           Prepend system binaries to PATH (default is append)
     -h --help    Show this screen.
 
     This package also provides a minimal sudo which is enough to run most programs as root
