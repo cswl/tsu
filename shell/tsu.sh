@@ -289,7 +289,7 @@ done
 
 ### ----- MAGISKSU
 # shellcheck disable=SC2117
-if [[ -z "$SKIP_SBIN" && "$(/sbin/su -v)" == *"MAGISKSU" ]]; then
+if [[ -z "$SKIP_SBIN" && -x "/sbin/su" && "$(/sbin/su -v)" == *"MAGISKSU" ]]; then
 	# We are on Magisk su
 	su_args=("/sbin/su")
 	[[ -z "$SWITCH_USER" ]] || su_args+=("$SWITCH_USER")

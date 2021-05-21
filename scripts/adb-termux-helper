@@ -1,0 +1,29 @@
+#!/system/bin/sh
+
+# Variables based on https://github.com/termux/termux-app/issues/77
+# from https://gist.github.com/rewida17/f8564bee5a196a8f51b98cd2e53813e4
+# TODO: View variables in termux GUI
+export PREFIX='/data/data/com.termux/files/usr'
+export HOME='/data/data/com.termux/files/home'
+export LD_LIBRARY_PATH='/data/data/com.termux/files/usr/lib'
+export PATH="/data/data/com.termux/files/usr/bin:/data/data/com.termux/files/usr/bin/applets:$PATH"
+export LANG='en_US.UTF-8'
+export SHELL='/data/data/com.termux/files/usr/bin/bash'
+export BIN='/data/data/com.termux/files/usr/bin'
+export TERM=xterm-256color
+export AR="arm-linux-androideabi-ar"
+export CPP="arm-linux-androideabi-cpp"
+export GCC="arm-linux-androideabi-gcc"
+export LD="arm-linux-androideabi-ld"
+export NM="arm-linux-androideabi-nm"
+export OBJDUMP="arm-linux-androideabi-objdump"
+export RANLIB="arm-linux-androideabi-ranlib"
+export READELF="arm-linux-androideabi-readelf"
+export STRIP="arm-linux-androideabi-strip"
+export TERMUX="/data/data/com.termux/"
+
+TERMUX_UID=$("$PREFIX/bin/stat" --printf '%u' "$PREFIX")
+export TERMUX_UID
+
+cd "$HOME" || true
+exec "$PREFIX/bin/sudo" -E -u "$TERMUX_UID" "$SHELL" --login

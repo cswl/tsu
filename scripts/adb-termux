@@ -1,0 +1,37 @@
+#!/bin/bash
+set -e
+
+# Run termux shell from adb
+# NOTE: you may need to run adb-termux --install (if tsu or adb-termux-helper is not installed)
+
+if ! command -v adb &>/dev/null; then
+  echo "Unable to find adb in path"
+  exit 1
+fi
+
+if ! adb root &>/dev/null ; then
+	echo "adb needs to be root to push files"
+	exit 2
+fi;
+
+TERMUX_PREFIX=/data/data/com.termux/files/usr
+
+[[ -n "$1" && "$1" == "--install" ]] && {
+  TERMUX_UID=$(adb shell stat -c '%u' "$TERMUX_PREFIX")
+  [[ -z "$TERMUX_UID" ]] && {
+    echo termux not installed >&2
+    exit 3
+  }
+  adb push ./scripts/adb-termux-helper "$TERMUX_PREFIX/lib/adb-termux-helper"
+  ./extract_usage.py
+  sed -i "s|#!/usr/bin/bash|#!${TERMUX_PREFIX}/bin/bash|g" tsu
+  adb push tsu "$TERMUX_PREFIX/bin/tsu"
+  adb shell chown "$TERMUX_UID:$TERMUX_UID" "$TERMUX_PREFIX/lib/adb-termux-helper"
+  adb shell chown "$TERMUX_UID:$TERMUX_UID" "$TERMUX_PREFIX/bin/tsu"
+  adb shell chmod 0755 "$TERMUX_PREFIX/lib/adb-termux-helper"
+  adb shell chmod 0755 "$TERMUX_PREFIX/bin/tsu"
+  adb shell ln -s "$TERMUX_PREFIX/bin/tsu" "$TERMUX_PREFIX/bin/sudo" || true
+  shift
+}
+
+adb shell -t "$TERMUX_PREFIX/lib/adb-termux-helper"
