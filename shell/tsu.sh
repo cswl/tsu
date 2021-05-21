@@ -199,7 +199,6 @@ env_path_helper() {
 		# Other uid in the system cannot run Termux binaries
 		NEW_HOME="/"
 		NEW_PATH="$ANDROID_SYSPATHS"
-
 	fi
 
 	# We create a new environment cause the one on the
@@ -271,10 +270,8 @@ fi
 
 # Unset all Termux LD_* enviroment variables to prevent symbols missing , dlopen()ing of wrong libs.
 if [[ -n "$ENVIRONMENT_PRESERVE" ]]; then
-	EXP_ENV[LD_PRELOAD]="$LD_PRELOAD"
-	if [[ -n "$LD_LIBRARY_PATH" ]]; then
-		EXP_ENV[LD_LIBRARY_PATH]="$LD_LIBRARY_PATH"
-	fi
+	[[ -n "$LD_PRELOAD" ]] && EXP_ENV[LD_PRELOAD]="$LD_PRELOAD"
+	[[ -n "$LD_LIBRARY_PATH" ]] && EXP_ENV[LD_LIBRARY_PATH]="$LD_LIBRARY_PATH"
 fi
 unset LD_LIBRARY_PATH
 unset LD_PRELOAD
@@ -322,9 +319,8 @@ else
 				su_args=("$SU_BINARY")
 				# Default uid is required
 				[[ -z "$SWITCH_USER" ]] && su_args+=("0") || su_args+=("$SWITCH_USER")
-				# Let's use the system toybox/toolbox for now
 				if [[ -n "$ENVIRONMENT_PRESERVE" ]]; then
-					su_cmdline="$STARTUP_SCRIPT"
+					su_cmdline="env $ENV_BUILT $STARTUP_SCRIPT"
 				else
 					su_cmdline="env -i $ENV_BUILT $STARTUP_SCRIPT"
 				fi
