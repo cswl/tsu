@@ -25,5 +25,6 @@ export TERMUX="/data/data/com.termux/"
 TERMUX_UID=$("$PREFIX/bin/stat" --printf '%u' "$PREFIX")
 export TERMUX_UID
 
+[[ -n $1 ]] && CMD="-c $*"
 cd "$HOME" || true
-exec "$PREFIX/bin/sudo" -E -u "$TERMUX_UID" "$SHELL" --login
+exec "$PREFIX/bin/sudo" -E -u "$TERMUX_UID" "$SHELL" --login $CMD

@@ -31,7 +31,7 @@ TERMUX_PREFIX=/data/data/com.termux/files/usr
   adb shell chmod 0755 "$TERMUX_PREFIX/lib/adb-termux-helper"
   adb shell chmod 0755 "$TERMUX_PREFIX/bin/tsu"
   adb shell ln -s "$TERMUX_PREFIX/bin/tsu" "$TERMUX_PREFIX/bin/sudo" || true
-  shift
+  exit 0
 }
 
-adb shell -t "$TERMUX_PREFIX/lib/adb-termux-helper"
+adb shell -t "$TERMUX_PREFIX/lib/adb-termux-helper" $@
