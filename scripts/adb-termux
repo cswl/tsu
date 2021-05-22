@@ -12,7 +12,6 @@ fi
 if ! adb root &>/dev/null ; then
   # Run again to get original error
   adb root
-	exit 2
 fi;
 
 TERMUX_PREFIX=/data/data/com.termux/files/usr
