@@ -5,12 +5,13 @@ set -e
 # NOTE: you may need to run adb-termux --install (if tsu or adb-termux-helper is not installed)
 
 if ! command -v adb &>/dev/null; then
-  echo "Unable to find adb in path"
+  echo "Unable to find adb in path" >&2
   exit 1
 fi
 
 if ! adb root &>/dev/null ; then
-	echo "adb needs to be root to push files"
+  # Run again to get original error
+  adb root
 	exit 2
 fi;
 
