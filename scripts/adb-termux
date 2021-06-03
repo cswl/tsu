@@ -34,4 +34,13 @@ TERMUX_PREFIX=/data/data/com.termux/files/usr
   shift
 }
 
-adb shell -t "$TERMUX_PREFIX/lib/adb-termux-helper"
+# -t: allocate a pty if on a tty (-tt: force pty allocation)
+# Looks like -tt (force pty allocation) works on both linux and MSYS2
+[[ -z "$PTY_MODE" ]] && PTY_MODE='-tt'
+# NOTE: not sure when forcing pty allocation should be a problem...
+# if [[ -z "$MSYSCON" && "$MSYSCON" == "mintty.exe" ]]; then
+#   PTY_MODE="-tt"
+# else
+#   PTY_MODE="-t"
+
+adb shell "$PTY_MODE" "$TERMUX_PREFIX/lib/adb-termux-helper"
