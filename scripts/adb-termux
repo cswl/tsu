@@ -5,13 +5,13 @@ set -e
 # NOTE: you may need to run adb-termux --install (if tsu or adb-termux-helper is not installed)
 
 if ! command -v adb &>/dev/null; then
-  echo "Unable to find adb in path"
+  echo "Unable to find adb in path" >&2
   exit 1
 fi
 
 if ! adb root &>/dev/null ; then
-	echo "adb needs to be root to push files"
-	exit 2
+  # Run again to get original error
+  adb root
 fi;
 
 TERMUX_PREFIX=/data/data/com.termux/files/usr
@@ -31,7 +31,7 @@ TERMUX_PREFIX=/data/data/com.termux/files/usr
   adb shell chmod 0755 "$TERMUX_PREFIX/lib/adb-termux-helper"
   adb shell chmod 0755 "$TERMUX_PREFIX/bin/tsu"
   adb shell ln -s "$TERMUX_PREFIX/bin/tsu" "$TERMUX_PREFIX/bin/sudo" || true
-  shift
+  exit 0
 }
 
 # -t: allocate a pty if on a tty (-tt: force pty allocation)
@@ -43,4 +43,4 @@ TERMUX_PREFIX=/data/data/com.termux/files/usr
 # else
 #   PTY_MODE="-t"
 
-adb shell "$PTY_MODE" "$TERMUX_PREFIX/lib/adb-termux-helper"
+adb shell "$PTY_MODE" "$TERMUX_PREFIX/lib/adb-termux-helper $(printf "%q " "$@")"

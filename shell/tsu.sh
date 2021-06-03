@@ -1,4 +1,5 @@
 #!/usr/bin/bash
+set -e
 # vim: noexpandtab copyindent preserveindent softtabstop=0 shiftwidth=4 tabstop=4
 
 # Copyright (c) 2020, Cswl C. https://github.com/cswl
@@ -242,17 +243,12 @@ if [[ "$_TSU_AS_SUDO" == true ]]; then
 		show_usage_sudo
 		exit 1
 	fi
-	CMD_ARGS=$(printf '%q ' "$@")
 	log_DEBUG ENVIRONMENT_PRESERVE
 	[[ -n "$ENVIRONMENT_PRESERVE" ]] || env_path_helper
-
-	STARTUP_SCRIPT="$CMD_ARGS"
 else
-
 	root_shell_helper
 	env_path_helper
-
-	STARTUP_SCRIPT="$ROOT_SHELL"
+	set -- "$ROOT_SHELL"
 fi
 
 SU_BINARY_SEARCH=("/system/xbin/su" "/system/bin/su" "/su/bin/su")
@@ -292,12 +288,12 @@ if [[ -z "$SKIP_SBIN" && -x "/sbin/su" && "$(/sbin/su -v)" == *"MAGISKSU" ]]; th
 
 	if [[ -n "$ENVIRONMENT_PRESERVE" ]]; then
 		su_args+=("--preserve-environment")
-		su_cmdline="PATH=$BB_MAGISK:$PATH $ENV_BUILT $STARTUP_SCRIPT"
+		su_env="env PATH=$BB_MAGISK:$PATH $ENV_BUILT"
 	else
-		su_cmdline="PATH=$BB_MAGISK env -i $ENV_BUILT $STARTUP_SCRIPT"
+		su_env="env -i PATH=$BB_MAGISK $ENV_BUILT"
 	fi
 	su_args+=("-c")
-	exec "${su_args[@]}" "${su_cmdline}"
+	exec "${su_args[@]}" "${su_env} $*"
 	##### ----- END MAGISKSU
 else
 	##### ----- OTHERS SU
@@ -317,14 +313,14 @@ else
 				[[ -z "$SWITCH_USER" ]] && su_args+=("0") || su_args+=("$SWITCH_USER")
 				if [[ -n "$ENVIRONMENT_PRESERVE" ]]; then
 					# We have to explicitly pass PATH as it may be reset by su
-					su_cmdline="env PATH=$PATH $ENV_BUILT $STARTUP_SCRIPT"
+					su_env="env PATH=$PATH $ENV_BUILT"
 				else
-					su_cmdline="env -i $ENV_BUILT $STARTUP_SCRIPT"
+					su_env="env -i $ENV_BUILT"
 				fi
-				# If we quote ${su_cmdline} - su interprets it
+				# If we quote ${su_env} - su interprets it
 				# as one argument (executable) and not working properly
 				# shellcheck disable=SC2086
-				exec "${su_args[@]}" ${su_cmdline}
+				exec "${su_args[@]}" ${su_env} "$@"
 			else
 				su_args=("$SU_BINARY")
 				[[ -z "$SWITCH_USER" ]] || su_args+=("$SWITCH_USER")
@@ -332,12 +328,12 @@ else
 				# Let's use the system toybox/toolbox for now
 				if [[ -n "$ENVIRONMENT_PRESERVE" ]]; then
 					su_args+=("--preserve-environment")
-					su_cmdline="PATH=$ANDROID_SYSPATHS:$PATH $ENV_BUILT $STARTUP_SCRIPT "
+					su_env="env PATH=$ANDROID_SYSPATHS:$PATH $ENV_BUILT"
 				else
-					su_cmdline="PATH=$ANDROID_SYSPATHS env -i $ENV_BUILT $STARTUP_SCRIPT"
+					su_env="env -i PATH=$ANDROID_SYSPATHS $ENV_BUILT"
 				fi
 				su_args+=("-c")
-				exec "${su_args[@]}" "${su_cmdline}"
+				exec "${su_args[@]}" "${su_env} $*"
 			fi
 		fi
 	done
