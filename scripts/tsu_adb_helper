@@ -1,6 +1,6 @@
 #!/system/bin/sh
 
-if [ "$1" = 'debug' ]; then 
+if [ "$1" = 'debug' ]; then
 	echo 'Debugging mode'
 	set -x
 fi;

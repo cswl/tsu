@@ -48,9 +48,9 @@ EOF
 
 show_usage_sudo() {
 	cat <<"EOF"
-sudo - run commands as root or another user 
-  usage: sudo command 
-  usage: sudo [-E] [-u USER] command 
+sudo - run commands as root or another user
+  usage: sudo command
+  usage: sudo [-E] [-u USER] command
 
     Options:
       -E          Preserve environment variables from the current shell.
