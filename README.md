@@ -1,6 +1,6 @@
 ### tsu
 
-Gain a root shell on Termux while being able to run Termux commands as root.  
+Gain a root shell on Termux while being able to run Termux commands as root.
 
 Or run one off commands with well known `sudo` from normal linux distros.
 
@@ -24,7 +24,7 @@ tsu A su interface wrapper for Termux
 
         sudo command
 
-    https://github.com/cswl/tsu 
+    https://github.com/cswl/tsu
 ```
 
 ### Building
