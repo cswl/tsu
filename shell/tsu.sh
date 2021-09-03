@@ -7,7 +7,7 @@ set -e
 # https://github.com/cswl/tsu/blob/v8/LICENSE.md
 
 ### tsu
-_TSU_VERSION="8.6.0"
+_TSU_VERSION="8.6.1"
 
 log_DEBUG() { __debug_wrapper() { :; }; }
 
@@ -261,7 +261,9 @@ else
 fi
 
 # Unset all Termux LD_* enviroment variables to prevent symbols missing , dlopen()ing of wrong libs.
+ENV=()
 if [[ -n "$ENVIRONMENT_PRESERVE" ]]; then
+	while IFS='' read -r line; do ENV+=("$line"); done < <(env)
 	[[ -n "$LD_PRELOAD" ]] && EXP_ENV[LD_PRELOAD]="$LD_PRELOAD"
 	[[ -n "$LD_LIBRARY_PATH" ]] && EXP_ENV[LD_LIBRARY_PATH]="$LD_LIBRARY_PATH"
 fi
@@ -270,10 +272,10 @@ unset LD_PRELOAD
 
 ## Build the environment
 [[ -z "$_TSU_DEBUG" ]] || set +x
-ENV_BUILT=""
+ENV_BUILT=()
 
 for key in "${!EXP_ENV[@]}"; do
-	ENV_BUILT="$ENV_BUILT $key=${EXP_ENV[$key]} "
+	ENV_BUILT+=("$key=${EXP_ENV[$key]}")
 done
 [[ -z "$_TSU_DEBUG" ]] || set -x
 
@@ -284,16 +286,16 @@ done
 if [[ -z "$SKIP_SBIN" && -x "/sbin/su" && "$(/sbin/su -v)" == *"MAGISKSU" ]]; then
 	# We are on Magisk su
 	su_args=("/sbin/su")
-	[[ -z "$SWITCH_USER" ]] || su_args+=("$SWITCH_USER")
 
 	if [[ -n "$ENVIRONMENT_PRESERVE" ]]; then
-		su_args+=("--preserve-environment")
-		su_env="env PATH=$BB_MAGISK:$PATH $ENV_BUILT"
+		su_cmd+=("env" "${ENV[@]}" "PATH=$BB_MAGISK:$PATH" "${ENV_BUILT[@]}")
 	else
-		su_env="env -i PATH=$BB_MAGISK $ENV_BUILT"
+		su_cmd+=("env" "-i" "PATH=$BB_MAGISK:$PATH" "${ENV_BUILT[@]}")
 	fi
-	su_args+=("-c")
-	exec "${su_args[@]}" "${su_env} $*"
+	su_cmd+=("$@")
+	su_args+=( "-c" "$(printf '%q ' "${su_cmd[@]}")" )
+	[[ -z "$SWITCH_USER" ]] || su_args+=("$SWITCH_USER")
+	exec "${su_args[@]}"
 	##### ----- END MAGISKSU
 else
 	##### ----- OTHERS SU
@@ -312,28 +314,26 @@ else
 				# Default uid is required
 				[[ -z "$SWITCH_USER" ]] && su_args+=("0") || su_args+=("$SWITCH_USER")
 				if [[ -n "$ENVIRONMENT_PRESERVE" ]]; then
-					# We have to explicitly pass PATH as it may be reset by su
-					su_env="env PATH=$PATH $ENV_BUILT"
+					su_cmd=("env" "${ENV[@]}" "${ENV_BUILT[@]}")
 				else
-					su_env="env -i $ENV_BUILT"
+					su_cmd=("env" "-i" "${ENV_BUILT[@]}")
 				fi
-				# If we quote ${su_env} - su interprets it
-				# as one argument (executable) and not working properly
-				# shellcheck disable=SC2086
-				exec "${su_args[@]}" ${su_env} "$@"
+				su_cmd+=("$@")
+				exec "${su_args[@]}" "${su_cmd[@]}"
 			else
 				su_args=("$SU_BINARY")
-				[[ -z "$SWITCH_USER" ]] || su_args+=("$SWITCH_USER")
 
 				# Let's use the system toybox/toolbox for now
 				if [[ -n "$ENVIRONMENT_PRESERVE" ]]; then
-					su_args+=("--preserve-environment")
-					su_env="env PATH=$ANDROID_SYSPATHS:$PATH $ENV_BUILT"
+					su_cmd=("env" "${ENV[@]}" "PATH=$ANDROID_SYSPATHS:$PATH" "${ENV_BUILT[@]}")
 				else
-					su_env="env -i PATH=$ANDROID_SYSPATHS $ENV_BUILT"
+					su_cmd=("env" "-i" "PATH=$ANDROID_SYSPATHS:$PATH" "${ENV_BUILT[@]}")
 				fi
-				su_args+=("-c")
-				exec "${su_args[@]}" "${su_env} $*"
+				su_cmd+=("$@")
+				su_args+=( "-c" "$(printf '%q ' "${su_cmd[@]}")" )
+
+				[[ -z "$SWITCH_USER" ]] || su_args+=("$SWITCH_USER")
+				exec "${su_args[@]}"
 			fi
 		fi
 	done
