@@ -325,9 +325,9 @@ else
 
 				# Let's use the system toybox/toolbox for now
 				if [[ -n "$ENVIRONMENT_PRESERVE" ]]; then
-					su_cmd=("env" "${ENV[@]}" "PATH=$ANDROID_SYSPATHS:$PATH" "${ENV_BUILT[@]}")
+					su_cmd=("env" "${ENV[@]}" "${ENV_BUILT[@]}")
 				else
-					su_cmd=("env" "-i" "PATH=$ANDROID_SYSPATHS:$PATH" "${ENV_BUILT[@]}")
+					su_cmd=("env" "-i" "${ENV_BUILT[@]}")
 				fi
 				su_cmd+=("$@")
 				su_args+=( "-c" "$(printf '%q ' "${su_cmd[@]}")" )
