@@ -1,11 +1,13 @@
 #!/usr/bin/bash
+set -e
+# vim: noexpandtab copyindent preserveindent softtabstop=0 shiftwidth=4 tabstop=4
 
 # Copyright (c) 2020, Cswl C. https://github.com/cswl
 # This software is licensed under the ISC Liscense.
 # https://github.com/cswl/tsu/blob/v8/LICENSE.md
 
 ### tsu
-_TSU_VERSION="8.6.0"
+_TSU_VERSION="8.6.1"
 
 log_DEBUG() { __debug_wrapper() { :; }; }
 
@@ -64,7 +66,7 @@ TERMUX_PREFIX="$TERMUX_FS/usr"
 TERMUX_PATH="$TERMUX_PREFIX/bin:$TERMUX_PREFIX/bin/applets"
 ROOT_HOME="$TERMUX_FS/home/.suroot"
 ANDROID_SYSPATHS="/system/bin:/system/xbin"
-EXTRA_SYSPATHS="/sbin:/sbin/bin"
+EXTRA_SYSPATHS="/sbin:/sbin/bin:/vendor/bin"
 #ANDROID_ASROOT_SYSPATHS="/bin:/xbin"
 
 # Some constants that may change in future.
@@ -115,10 +117,6 @@ if [[ -z "$_TSU_AS_SUDO" ]]; then
 			PREPEND_SYSTEM_PATH=true
 			shift
 			;;
-		-a | --sysadd)
-			APPEND_SYSTEM_PATH=true
-			shift
-			;;
 		-s | --shell)
 			ALT_SHELL="$2"
 			shift
@@ -156,13 +154,22 @@ env_path_helper() {
 	if [[ -z "$SWITCH_USER" ]]; then
 		## By default we start a fresh root shell with HOME set to that of the root home
 
-		# Creat root $HOME if it doesnt exsists yet
-		[[ -d "$ROOT_HOME" ]] || mkdir "$ROOT_HOME"
 		NEW_HOME="$ROOT_HOME"
+		EXP_ENV[TMPDIR]="$ROOT_HOME/.tmp"
+		# Create $TMPDIR, and $HOME, if they do not exist
+		[[ -d "${EXP_ENV[TMPDIR]}" ]] || mkdir -p "${EXP_ENV[TMPDIR]}"
 
 		EXP_ENV[PREFIX]="$PREFIX"
-		EXP_ENV[TMPDIR]="$ROOT_HOME/.tmp"
-		EXP_ENV[LD_PRELOAD]="$LD_PRELOAD"
+
+		# Empty LD_PRELOAD cause problems on some systems
+		[[ -n "$LD_PRELOAD" ]] && EXP_ENV[LD_PRELOAD]="$LD_PRELOAD"
+
+		# Android versions prior to 7.0 will break if LD_LIBRARY_PATH is set
+		log_DEBUG "LD_LIBRARY_PATH"
+		if [[ -n "$LD_LIBRARY_PATH" ]]; then
+			SYS_LIBS="/system/lib64"
+			EXP_ENV[LD_LIBRARY_PATH]="$LD_LIBRARY_PATH:$SYS_LIBS"
+		fi
 
 		log_DEBUG _TSU_AS_SUDO
 		if [[ "$_TSU_AS_SUDO" == true ]]; then
@@ -174,14 +181,6 @@ env_path_helper() {
 			EXP_ENV[SUDO_USER]="$(id -u)"
 		else
 			NEW_PATH="$TERMUX_PATH"
-		fi
-
-		# Android versions prior to 7.0 will break if LD_LIBRARY_PATH is set
-		log_DEBUG "LD_LIBRARY_PATH"
-		if [[ -n "$LD_LIBRARY_PATH" ]]; then
-			SYS_LIBS="/system/lib64"
-			EXP_ENV[LD_LIBRARY_PATH]="$LD_LIBRARY_PATH:$SYS_LIBS"
-		else
 			ASP="${ANDROID_SYSPATHS}:${EXTRA_SYSPATHS}"
 			# Should we add /system/* paths:
 			# Some Android utilities work. but some break
@@ -197,7 +196,6 @@ env_path_helper() {
 		# Other uid in the system cannot run Termux binaries
 		NEW_HOME="/"
 		NEW_PATH="$ANDROID_SYSPATHS"
-
 	fi
 
 	# We create a new environment cause the one on the
@@ -245,17 +243,12 @@ if [[ "$_TSU_AS_SUDO" == true ]]; then
 		show_usage_sudo
 		exit 1
 	fi
-	CMD_ARGS=$(printf '%q ' "$@")
 	log_DEBUG ENVIRONMENT_PRESERVE
 	[[ -n "$ENVIRONMENT_PRESERVE" ]] || env_path_helper
-
-	STARTUP_SCRIPT="$CMD_ARGS"
 else
-
 	root_shell_helper
 	env_path_helper
-
-	STARTUP_SCRIPT="$ROOT_SHELL"
+	set -- "$ROOT_SHELL"
 fi
 
 SU_BINARY_SEARCH=("/system/xbin/su" "/system/bin/su" "/su/bin/su")
@@ -268,21 +261,21 @@ else
 fi
 
 # Unset all Termux LD_* enviroment variables to prevent symbols missing , dlopen()ing of wrong libs.
+ENV=()
 if [[ -n "$ENVIRONMENT_PRESERVE" ]]; then
-	EXP_ENV[LD_PRELOAD]="$LD_PRELOAD"
-	if [[ -n "$LD_LIBRARY_PATH" ]]; then
-		EXP_ENV[LD_LIBRARY_PATH]="$LD_LIBRARY_PATH"
-	fi
+	while IFS='' read -r line; do ENV+=("$line"); done < <(env)
+	[[ -n "$LD_PRELOAD" ]] && EXP_ENV[LD_PRELOAD]="$LD_PRELOAD"
+	[[ -n "$LD_LIBRARY_PATH" ]] && EXP_ENV[LD_LIBRARY_PATH]="$LD_LIBRARY_PATH"
 fi
 unset LD_LIBRARY_PATH
 unset LD_PRELOAD
 
 ## Build the environment
 [[ -z "$_TSU_DEBUG" ]] || set +x
-ENV_BUILT=""
+ENV_BUILT=()
 
 for key in "${!EXP_ENV[@]}"; do
-	ENV_BUILT="$ENV_BUILT $key=${EXP_ENV[$key]} "
+	ENV_BUILT+=("$key=${EXP_ENV[$key]}")
 done
 [[ -z "$_TSU_DEBUG" ]] || set -x
 
@@ -290,37 +283,58 @@ done
 
 ### ----- MAGISKSU
 # shellcheck disable=SC2117
-if [[ -z "$SKIP_SBIN" && "$(/sbin/su -v)" == *"MAGISKSU" ]]; then
+if [[ -z "$SKIP_SBIN" && -x "/sbin/su" && "$(/sbin/su -v)" == *"MAGISKSU" ]]; then
 	# We are on Magisk su
 	su_args=("/sbin/su")
-	[[ -z "$SWITCH_USER" ]] || su_args+=("$SWITCH_USER")
 
 	if [[ -n "$ENVIRONMENT_PRESERVE" ]]; then
-		su_args+=("--preserve-environment")
-		su_cmdline="PATH=$BB_MAGISK:$PATH $ENV_BUILT $STARTUP_SCRIPT"
+		su_cmd+=("env" "${ENV[@]}" "PATH=$BB_MAGISK:$PATH" "${ENV_BUILT[@]}")
 	else
-		su_cmdline="PATH=$BB_MAGISK env -i $ENV_BUILT $STARTUP_SCRIPT"
+		su_cmd+=("env" "-i" "PATH=$BB_MAGISK:$PATH" "${ENV_BUILT[@]}")
 	fi
-	su_args+=("-c")
-	exec "${su_args[@]}" "${su_cmdline}"
+	su_cmd+=("$@")
+	su_args+=( "-c" "$(printf '%q ' "${su_cmd[@]}")" )
+	[[ -z "$SWITCH_USER" ]] || su_args+=("$SWITCH_USER")
+	exec "${su_args[@]}"
 	##### ----- END MAGISKSU
 else
 	##### ----- OTHERS SU
 	for SU_BINARY in "${SU_BINARY_SEARCH[@]}"; do
 		if [[ -x "$SU_BINARY" ]]; then
-
-			su_args=("$SU_BINARY")
-			[[ -z "$SWITCH_USER" ]] || su_args+=("$SWITCH_USER")
-
-			# Let's use the system toybox/toolbox for now
-			if [[ -n "$ENVIRONMENT_PRESERVE" ]]; then
-				su_args+=("--preserve-environment")
-				su_cmdline="PATH=$ANDROID_SYSPATHS:$PATH $ENV_BUILT $STARTUP_SCRIPT "
+			SU_HELP="$($SU_BINARY --help 2>&1)"
+			if [[
+				-n "$SU_AOSP" ||
+				# https://android.googlesource.com/platform/system/extras/+/95f7685/su/su.c
+				"$SU_HELP" == *"usage: su [UID[,GID[,GID2]...]] [COMMAND [ARG...]]"* ||
+				# https://android.googlesource.com/platform/system/extras/+/refs/heads/android10-mainline-media-release/su/su.cpp
+				"$SU_HELP" == *"usage: su [WHO [COMMAND...]]"*
+			]]; then
+				# This is AOSP su without -c argument
+				su_args=("$SU_BINARY")
+				# Default uid is required
+				[[ -z "$SWITCH_USER" ]] && su_args+=("0") || su_args+=("$SWITCH_USER")
+				if [[ -n "$ENVIRONMENT_PRESERVE" ]]; then
+					su_cmd=("env" "${ENV[@]}" "${ENV_BUILT[@]}")
+				else
+					su_cmd=("env" "-i" "${ENV_BUILT[@]}")
+				fi
+				su_cmd+=("$@")
+				exec "${su_args[@]}" "${su_cmd[@]}"
 			else
-				su_cmdline="PATH=$ANDROID_SYSPATHS env -i $ENV_BUILT $STARTUP_SCRIPT"
+				su_args=("$SU_BINARY")
+
+				# Let's use the system toybox/toolbox for now
+				if [[ -n "$ENVIRONMENT_PRESERVE" ]]; then
+					su_cmd=("env" "${ENV[@]}" "${ENV_BUILT[@]}")
+				else
+					su_cmd=("env" "-i" "${ENV_BUILT[@]}")
+				fi
+				su_cmd+=("$@")
+				su_args+=( "-c" "$(printf '%q ' "${su_cmd[@]}")" )
+
+				[[ -z "$SWITCH_USER" ]] || su_args+=("$SWITCH_USER")
+				exec "${su_args[@]}"
 			fi
-			su_args+=("-c")
-			exec "${su_args[@]}" "${su_cmdline}"
 		fi
 	done
 fi
