@@ -258,7 +258,7 @@ else
 	STARTUP_SCRIPT="$ROOT_SHELL"
 fi
 
-SU_BINARY_SEARCH=("/system/xbin/su" "/system/bin/su" "/su/bin/su")
+SU_BINARY_SEARCH=("/system/xbin/su" "/system/bin/su" "/su/bin/su" "/apex/com.android.runtime/bin")
 
 # On some systems with other root methods `/sbin` is inacessible.
 if [[ -x "/sbin" ]]; then
