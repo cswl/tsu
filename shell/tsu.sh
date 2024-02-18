@@ -282,6 +282,9 @@ unset LD_PRELOAD
 ENV_BUILT=""
 
 for key in "${!EXP_ENV[@]}"; do
+	if [[ -z "${EXP_ENV[$key]}" ]]; then
+		continue;
+	fi
 	ENV_BUILT="$ENV_BUILT $key=${EXP_ENV[$key]} "
 done
 [[ -z "$_TSU_DEBUG" ]] || set -x
